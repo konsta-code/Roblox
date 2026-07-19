@@ -6,7 +6,7 @@
 -- entscheidet über Treffer/Schaden. Damage-Cheating auf Client-Seite ist
 -- damit wirkungslos.
 --
--- Benötigt: RemoteEvent "FireWeapon" in ReplicatedStorage (Client -> Server)
+-- v2: Self-Knockback nutzt jetzt auch Extra-Z (aus T:A Datamine ExtraZMomentum)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,16 +45,38 @@ local function applyExplosion(position: Vector3, shooter: Player)
 	end
 
 	-- Self-Knockback ("Disc-Jump") für den Schützen
+	-- Basiert auf Original: MomentumTransfer + InstigatorMultiplier + ExtraZMomentum
 	if Constants.SELF_KNOCKBACK_ENABLED then
 		local shooterChar = shooter.Character
 		local shooterRoot = shooterChar and shooterChar:FindFirstChild("HumanoidRootPart")
 		if shooterRoot then
 			local distance = (shooterRoot.Position - position).Magnitude
-			if distance < Constants.SELF_KNOCKBACK_MAX_DISTANCE then
-				local falloff = 1 - (distance / Constants.SELF_KNOCKBACK_MAX_DISTANCE)
+			local minDist = Constants.SELF_KNOCKBACK_MIN_DISTANCE or 3
+			local maxDist = Constants.SELF_KNOCKBACK_MAX_DISTANCE or 20
+
+			if distance < maxDist then
+				-- Falloff: zu nah oder zu weit = weniger Boost
+				local falloff = 1
+				if distance < minDist then
+					falloff = distance / minDist
+				else
+					falloff = 1 - ((distance - minDist) / (maxDist - minDist))
+				end
+				falloff = math.clamp(falloff, 0, 1)
+
 				local direction = shooterRoot.Position - position
-				direction = direction.Magnitude > 0 and direction.Unit or Vector3.yAxis
-				shooterRoot.AssemblyLinearVelocity += direction * Constants.SELF_KNOCKBACK_FORCE * falloff
+				if direction.Magnitude < 0.1 then
+					direction = Vector3.yAxis
+				else
+					direction = direction.Unit
+				end
+
+				local force = Constants.SELF_KNOCKBACK_FORCE * falloff
+				local upForce = (Constants.SELF_KNOCKBACK_UP_FORCE or 45) * falloff
+
+				-- Horizontaler Anteil + extra vertikaler Boost (wie ExtraZMomentum im Original)
+				local knockback = direction * force + Vector3.new(0, upForce, 0)
+				shooterRoot.AssemblyLinearVelocity += knockback
 			end
 		end
 	end
@@ -65,7 +87,7 @@ local function simulateProjectile(shooter: Player, origin: Vector3, direction: V
 	projectile.Shape = Enum.PartType.Ball
 	projectile.Size = Vector3.new(Constants.PROJECTILE_RADIUS, Constants.PROJECTILE_RADIUS, Constants.PROJECTILE_RADIUS) * 2
 	projectile.Position = origin
-	projectile.Anchored = true -- Bewegung per Code (Raycast-Stepping), nicht per Physik-Engine
+	projectile.Anchored = true
 	projectile.CanCollide = false
 	projectile.Material = Enum.Material.Neon
 	projectile.Parent = workspace
@@ -74,7 +96,15 @@ local function simulateProjectile(shooter: Player, origin: Vector3, direction: V
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = { shooter.Character }
 
-	local velocity = direction.Unit * Constants.PROJECTILE_SPEED
+	-- Inheritance: Projektil übernimmt einen Teil der Spieler-Velocity (Original 0.5)
+	local inheritance = Constants.PROJECTILE_INHERITANCE or 0.5
+	local shooterRoot = shooter.Character and shooter.Character:FindFirstChild("HumanoidRootPart")
+	local inheritedVel = Vector3.zero
+	if shooterRoot then
+		inheritedVel = shooterRoot.AssemblyLinearVelocity * inheritance
+	end
+
+	local velocity = direction.Unit * Constants.PROJECTILE_SPEED + inheritedVel
 	local startTime = os.clock()
 	local currentPos = origin
 
@@ -105,11 +135,10 @@ fireEvent.OnServerEvent:Connect(function(player: Player, origin: Vector3, direct
 	local now = os.clock()
 	local last = lastFireTime[player] or 0
 	if now - last < Constants.FIRE_COOLDOWN then
-		return -- Client kann so oft senden wie er will, Server erzwingt den Cooldown
+		return
 	end
 	lastFireTime[player] = now
 
-	-- Grobe Sanity-Check: Ursprung darf nicht unrealistisch weit vom Character sein
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	if root and (root.Position - origin).Magnitude > 10 then
