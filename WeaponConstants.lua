@@ -1,23 +1,22 @@
 -- WeaponConstants.lua
 -- Ablageort: ReplicatedStorage/Modules/WeaponConstants
--- Tuning für die Skillshot-Splash-Waffe (intern "Spinfusor-Prinzip" als
--- Referenz - eigenes Branding/Name kommt on top, das hier ist reine Mechanik).
+-- Optimiert für stärkeres Disc-Jump Feeling (Tribes Ascend Style)
 
 local Constants = {}
 
-Constants.PROJECTILE_SPEED = 180       -- studs/s, Geschossgeschwindigkeit
-Constants.PROJECTILE_LIFETIME = 3      -- Sekunden bis Selbstzerstörung ohne Treffer
-Constants.PROJECTILE_RADIUS = 0.8      -- Kollisionsradius des Geschosses selbst
+Constants.PROJECTILE_SPEED = 195       -- studs/s
+Constants.PROJECTILE_LIFETIME = 3
+Constants.PROJECTILE_RADIUS = 0.8
 
-Constants.SPLASH_RADIUS = 12           -- Studs, Wirkungsradius der Explosion
-Constants.DIRECT_HIT_DAMAGE = 75       -- Schaden bei direktem Treffer
-Constants.SPLASH_MAX_DAMAGE = 60       -- Schaden im Epizentrum der Explosion
-Constants.SPLASH_MIN_DAMAGE = 5        -- Schaden am Rand des Splash-Radius
+Constants.SPLASH_RADIUS = 13
+Constants.DIRECT_HIT_DAMAGE = 85
+Constants.SPLASH_MAX_DAMAGE = 70
+Constants.SPLASH_MIN_DAMAGE = 8
 
-Constants.FIRE_COOLDOWN = 0.85         -- Sekunden zwischen Schüssen
+Constants.FIRE_COOLDOWN = 0.78
 
 Constants.SELF_KNOCKBACK_ENABLED = true
-Constants.SELF_KNOCKBACK_FORCE = 55        -- "Disc-Jump"-Skilltech
-Constants.SELF_KNOCKBACK_MAX_DISTANCE = 15
+Constants.SELF_KNOCKBACK_FORCE = 85        -- stärkerer Disc-Jump
+Constants.SELF_KNOCKBACK_MAX_DISTANCE = 18
 
 return Constants

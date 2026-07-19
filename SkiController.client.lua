@@ -6,10 +6,11 @@
 -- RootPart. Roblox' Physik-Engine übernimmt weiterhin Kollisionsauflösung
 -- gegen Wände/Rampen/Treppen - wir berechnen nur die gewünschte Velocity.
 --
--- WalkSpeed wird in setupCharacter() auf 0 gesetzt, das neutralisiert das
--- Standard-PlayerModule (StarterPlayerScripts.PlayerModule.ControlModule),
--- ohne es anzufassen - siehe Kommentar dort für Details. Kein separater
--- Einbau-Schritt mehr nötig.
+-- Optimiert auf Tribes Ascend Feeling (Juli 2026):
+-- - Fast null Reibung beim Skien
+-- - Stärkere Slope-Force
+-- - Forward-Thrust beim Jetten
+-- - Bessere Air-Control
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -48,22 +49,14 @@ local function setupCharacter(newCharacter: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	rootPart = character:WaitForChild("HumanoidRootPart") :: BasePart
 
-	-- Custom-Movement übernimmt die Kontrolle, Standard-Humanoid nur für
-	-- Animation/Health/Kollisionsform behalten. WalkSpeed = 0 ist der
-	-- eigentliche Trick gegen das Standard-PlayerModule (StarterPlayerScripts.
-	-- PlayerModule.ControlModule): es läuft technisch weiter und ruft weiter
-	-- Humanoid:Move() auf, aber bei WalkSpeed 0 hat das keine Wirkung mehr -
-	-- nur noch dieser Controller bewegt den Character. Robuster als das
-	-- ControlModule selbst zu löschen/umzubauen, und funktioniert identisch
-	-- für Keyboard/Gamepad/Touch, ohne dass man jede Eingabemethode einzeln
-	-- anfassen muss.
+	-- Custom-Movement übernimmt die Kontrolle
 	humanoid.WalkSpeed = 0
 	humanoid.AutoRotate = false
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
 	groundParams.FilterDescendantsInstances = { character }
 
-	-- Reset bei Respawn, sonst startet man mit Velocity/Energie vom Tod
+	-- Reset bei Respawn
 	State.velocity = Vector3.zero
 	State.jetpackEnergy = Constants.JETPACK_MAX_ENERGY
 end
@@ -93,10 +86,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.Space then
 		Input.jumpHeld = true
-		-- Einmaliger Impuls beim Drücken (nicht bei jedem Heartbeat solange
-		-- gehalten) - sonst würde man dauerhaft nach oben beschleunigen.
-		-- Nicht auslösen, während schon geskied wird: Space hält dann die
-		-- Ski-Bedingung, soll aber keinen zusätzlichen Sprung auslösen.
 		if State.isGrounded and not State.isSkiing then
 			State.velocity = Vector3.new(State.velocity.X, Constants.JUMP_POWER, State.velocity.Z)
 		end
@@ -123,57 +112,42 @@ local function checkGround(): (boolean, Vector3)
 	return false, Vector3.yAxis
 end
 
--- === Ski-Physik ===
+-- === Ski-Physik (optimiert) ===
 
 local function applySkiPhysics(dt: number)
 	local slopeAngle = math.deg(math.acos(math.clamp(State.groundNormal:Dot(Vector3.yAxis), -1, 1)))
 	local isSkiing = Input.jumpHeld and slopeAngle > Constants.SKI_MIN_SLOPE_ANGLE
 	State.isSkiing = isSkiing
 
-	-- Hangabtrieb entlang der Normalen - beschleunigt bergab, unabhängig von Input.
-	-- Der horizontale Anteil der Normalen zeigt bereits hangabwärts (die Normale
-	-- kippt vom Hang weg, also zur tieferen Seite); kein zusätzliches Minus nötig
-	-- - das hatte hier vorher die Richtung umgedreht (bergauf statt bergab).
-	local slopeForce = Vector3.new(State.groundNormal.X, 0, State.groundNormal.Z) * Constants.GRAVITY
+	-- Hangabtrieb (stärker + korrekte Richtung)
+	local slopeDir = Vector3.new(State.groundNormal.X, 0, State.groundNormal.Z)
+	if slopeDir.Magnitude > 0.01 then
+		slopeDir = slopeDir.Unit
+	end
+	local slopeForce = slopeDir * Constants.GRAVITY * (Constants.SKI_SLOPE_FORCE_MULT or 1.35)
+
 	local horizontalVel = Vector3.new(State.velocity.X, 0, State.velocity.Z)
 
 	if isSkiing then
-		-- Momentum-erhaltend: Reibung ~0, Input steuert nur sanft mit, Slope/
-		-- Gravitation dominieren. inputForce bleibt hier bewusst eine
-		-- Beschleunigung (* dt), nicht die Zielgeschwindigkeit selbst.
-		local inputForce = Input.moveVector * (Constants.WALK_SPEED * 0.6)
+		-- Fast null Reibung + sanfte Input-Steuerung
+		local inputForce = Input.moveVector * (Constants.WALK_SPEED * 0.45)
 		horizontalVel = horizontalVel:Lerp(Vector3.zero, math.clamp(Constants.SKI_GROUND_FRICTION * dt, 0, 1))
 		horizontalVel += slopeForce * dt + inputForce * dt
 	else
-		-- Laufen: velocity folgt direkt der Zielgeschwindigkeit (WALK_SPEED),
-		-- friction bestimmt nur wie schnell sie das tut - vorher wurde
-		-- WALK_SPEED wie eine Beschleunigung behandelt, was die
-		-- Gleichgewichts-Geschwindigkeit auf WALK_SPEED/WALK_GROUND_FRICTION
-		-- gedrückt hat (2 Studs/s statt 16).
 		local desiredVel = Input.moveVector * Constants.WALK_SPEED
 		horizontalVel = horizontalVel:Lerp(desiredVel, math.clamp(Constants.WALK_GROUND_FRICTION * dt, 0, 1))
-		horizontalVel += slopeForce * dt
+		horizontalVel += slopeForce * dt * 0.4
 	end
 
 	if horizontalVel.Magnitude > Constants.MAX_SKI_SPEED then
 		horizontalVel = horizontalVel.Unit * Constants.MAX_SKI_SPEED
 	end
 
-	-- Y bleibt erhalten statt hart auf 0: sonst würde ein gerade erst
-	-- ausgelöster Sprung sofort wieder verschluckt, weil der Boden-Raycast
-	-- (GROUND_CHECK_DISTANCE = 3.5 Studs) in den ersten paar Frames nach dem
-	-- Absprung noch trifft und isGrounded weiter true meldet. Nach unten
-	-- (Y <= 0, normales Stehen/Landen) trotzdem kappen, sonst würde sich
-	-- Fallgeschwindigkeit auf unebenem Boden unbemerkt aufsummieren.
 	local newY = State.velocity.Y > 0 and State.velocity.Y or 0
 	State.velocity = Vector3.new(horizontalVel.X, newY, horizontalVel.Z)
 end
 
 -- === Blickrichtung ===
--- AutoRotate ist aus (siehe setupCharacter), also übernimmt das hier komplett:
--- RootPart dreht sich auf die horizontale Kamera-Blickrichtung, Position
--- bleibt unangetastet - kollidiert nicht mit der velocity-getriebenen
--- Bewegung, weil nur die Rotation gesetzt wird, nicht die Position.
 
 local function updateFacing()
 	local cam = workspace.CurrentCamera
@@ -186,13 +160,14 @@ local function updateFacing()
 	rootPart.CFrame = CFrame.new(rootPart.Position, rootPart.Position + flatLook)
 end
 
--- === Jetpack ===
+-- === Jetpack (mit Forward-Thrust) ===
 
 local function applyJetpack(dt: number)
 	local wantsThrust = Input.jetpackHeld and State.jetpackEnergy > 0
 
 	if wantsThrust then
-		State.velocity += Vector3.new(0, Constants.JETPACK_THRUST_FORCE * dt, 0)
+		local forwardBoost = Input.moveVector * Constants.JETPACK_THRUST_FORCE * (Constants.JETPACK_FORWARD_MULT or 0.55) * dt
+		State.velocity += Vector3.new(0, Constants.JETPACK_THRUST_FORCE * dt, 0) + forwardBoost
 		State.jetpackEnergy = math.max(0, State.jetpackEnergy - Constants.JETPACK_DRAIN_RATE * dt)
 		State.lastThrustTime = os.clock()
 	elseif os.clock() - State.lastThrustTime > Constants.JETPACK_REGEN_DELAY then
@@ -213,9 +188,14 @@ RunService.Heartbeat:Connect(function(dt)
 	if State.isGrounded and not Input.jetpackHeld then
 		applySkiPhysics(dt)
 	else
-		-- Airborne: eigene Gravitation + reduzierte Luftkontrolle
+		-- Airborne: stärkere Air-Control + Jetpack-Boost
 		State.velocity += Vector3.new(0, -Constants.GRAVITY * dt, 0)
-		State.velocity += Input.moveVector * (Constants.WALK_SPEED * 0.3) * dt
+
+		local airControl = Input.moveVector * (Constants.WALK_SPEED * 0.55) * dt
+		if Input.jetpackHeld then
+			airControl *= 1.4
+		end
+		State.velocity += airControl
 	end
 
 	applyJetpack(dt)
