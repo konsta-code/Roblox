@@ -23,12 +23,13 @@ local State = {
 	isSkiing = false,
 	jetpackEnergy = Constants.JETPACK_MAX_ENERGY,
 	lastThrustTime = 0,
+	jetpackThrustAlpha = 0,
 	wasGrounded = false,
 }
 
 local Input = {
 	moveVector = Vector3.zero,
-	jumpHeld = false,
+	skiHeld = false,
 	jetpackHeld = false,
 }
 
@@ -50,6 +51,7 @@ local function setupCharacter(newCharacter: Model)
 	State.isGrounded = false
 	State.isSkiing = false
 	State.jetpackEnergy = Constants.JETPACK_MAX_ENERGY
+	State.jetpackThrustAlpha = 0
 	State.wasGrounded = false
 end
 
@@ -77,10 +79,7 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.Space then
-		Input.jumpHeld = true
-		if State.isGrounded and not State.isSkiing then
-			State.velocity = Vector3.new(State.velocity.X, Constants.JUMP_POWER, State.velocity.Z)
-		end
+		Input.skiHeld = true
 	end
 	if input.KeyCode == Enum.KeyCode.LeftShift then
 		Input.jetpackHeld = true
@@ -88,7 +87,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then Input.jumpHeld = false end
+	if input.KeyCode == Enum.KeyCode.Space then Input.skiHeld = false end
 	if input.KeyCode == Enum.KeyCode.LeftShift then Input.jetpackHeld = false end
 end)
 
@@ -111,7 +110,7 @@ end
 local function applySkiPhysics(dt: number, justLanded: boolean)
 	local normal = State.groundNormal
 	local slopeAngle = math.deg(math.acos(math.clamp(normal:Dot(Vector3.yAxis), -1, 1)))
-	local isSkiing = Input.jumpHeld
+	local isSkiing = Input.skiHeld
 	State.isSkiing = isSkiing
 
 	-- Projiziert die Gravitation auf die Bodenebene. Die Hangbeschleunigung
@@ -171,11 +170,24 @@ local function applyJetpack(dt: number)
 	local wantsThrust = Input.jetpackHeld and State.jetpackEnergy > 0
 
 	if wantsThrust then
-		State.velocity += Vector3.new(0, Constants.JETPACK_THRUST_FORCE * dt, 0)
+		State.jetpackThrustAlpha = math.min(
+			1,
+			State.jetpackThrustAlpha + dt / Constants.JETPACK_RAMP_UP_TIME
+		)
+		local thrust = Constants.JETPACK_THRUST_START + (
+			Constants.JETPACK_THRUST_MAX - Constants.JETPACK_THRUST_START
+		) * State.jetpackThrustAlpha
+		State.velocity += Vector3.new(0, thrust * dt, 0)
 		State.jetpackEnergy = math.max(0, State.jetpackEnergy - Constants.JETPACK_DRAIN_RATE * dt)
 		State.lastThrustTime = os.clock()
-	elseif os.clock() - State.lastThrustTime > Constants.JETPACK_REGEN_DELAY then
-		State.jetpackEnergy = math.min(Constants.JETPACK_MAX_ENERGY, State.jetpackEnergy + Constants.JETPACK_REGEN_RATE * dt)
+	else
+		State.jetpackThrustAlpha = math.max(
+			0,
+			State.jetpackThrustAlpha - dt / Constants.JETPACK_RAMP_DOWN_TIME
+		)
+		if os.clock() - State.lastThrustTime > Constants.JETPACK_REGEN_DELAY then
+			State.jetpackEnergy = math.min(Constants.JETPACK_MAX_ENERGY, State.jetpackEnergy + Constants.JETPACK_REGEN_RATE * dt)
+		end
 	end
 
 	PlayerHudState.SetJetpackEnergy(State.jetpackEnergy)
@@ -194,7 +206,8 @@ RunService.Heartbeat:Connect(function(dt)
 	local justLanded = grounded and not State.wasGrounded
 	State.wasGrounded = grounded
 
-	if grounded and not Input.jetpackHeld then
+	local isJetpacking = Input.jetpackHeld and State.jetpackEnergy > 0
+	if grounded and not isJetpacking then
 		applySkiPhysics(dt, justLanded)
 	else
 		State.isSkiing = false
@@ -202,7 +215,6 @@ RunService.Heartbeat:Connect(function(dt)
 
 		-- Eine kontrollierte horizontale Luftbeschleunigung statt zweier
 		-- addierter Forward-Boosts.
-		local isJetpacking = Input.jetpackHeld and State.jetpackEnergy > 0
 		local airAcceleration = isJetpacking
 			and Constants.JETPACK_AIR_CONTROL_ACCELERATION
 			or Constants.AIR_CONTROL_ACCELERATION

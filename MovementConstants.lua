@@ -21,9 +21,12 @@ Constants.JETPACK_MAX_ENERGY = 100
 Constants.JETPACK_DRAIN_RATE = 36
 Constants.JETPACK_REGEN_RATE = 24
 Constants.JETPACK_REGEN_DELAY = 0.35
-Constants.JETPACK_THRUST_FORCE = 175
+Constants.JETPACK_THRUST_START = 112   -- sanfter Start, knapp über der eigenen Gravitation
+Constants.JETPACK_THRUST_MAX = 145     -- kontrollierter Maximalschub statt Katapult-Effekt
+Constants.JETPACK_RAMP_UP_TIME = 0.65
+Constants.JETPACK_RAMP_DOWN_TIME = 0.2
 Constants.AIR_CONTROL_ACCELERATION = 9
-Constants.JETPACK_AIR_CONTROL_ACCELERATION = 14
+Constants.JETPACK_AIR_CONTROL_ACCELERATION = 12
 
 -- Ground Detection + Landing
 Constants.GROUND_CHECK_DISTANCE = 4.0
