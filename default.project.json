@@ -1,0 +1,49 @@
+{
+  "name": "CTFGame",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Modules": {
+        "$className": "Folder",
+        "CTFSignals": { "$path": "CTFSignals.lua" },
+        "FlagConstants": { "$path": "FlagConstants.lua" },
+        "MatchConstants": { "$path": "MatchConstants.lua" },
+        "MatchSignals": { "$path": "MatchSignals.lua" },
+        "MovementConstants": { "$path": "MovementConstants.lua" },
+        "PlayerHudState": { "$path": "PlayerHudState.lua" },
+        "SpawnConstants": { "$path": "SpawnConstants.lua" },
+        "WeaponConstants": { "$path": "WeaponConstants.lua" },
+        "ChaingunConstants": { "$path": "ChaingunConstants.lua" }
+      },
+      "FireWeapon": { "$className": "RemoteEvent" },
+      "FireChaingun": { "$className": "RemoteEvent" },
+      "CTFScoreUpdate": { "$className": "RemoteEvent" },
+      "FlagCarryStatus": { "$className": "RemoteEvent" },
+      "MatchStateChanged": { "$className": "RemoteEvent" }
+    },
+
+    "ServerScriptService": {
+      "CTFManager": { "$path": "CTFManager.server.lua" },
+      "MatchManager": { "$path": "MatchManager.server.lua" },
+      "SpawnManager": { "$path": "SpawnManager.server.lua" },
+      "TeamAssignment": { "$path": "TeamAssignment.server.lua" },
+      "Chaingun": { "$path": "Chaingun.server.lua" },
+      "ProjectileWeapon": { "$path": "ProjectileWeapon.server.lua" }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "SkiController": { "$path": "SkiController.client.lua" },
+        "HudController": { "$path": "HudController.client.lua" },
+        "Chaingun": { "$path": "Chaingun.client.lua" },
+        "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" }
+      }
+    },
+
+    "Teams": {
+      "Red": { "$className": "Team" },
+      "Blue": { "$className": "Team" }
+    }
+  }
+}
