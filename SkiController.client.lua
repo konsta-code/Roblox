@@ -135,9 +135,29 @@ local function applySkiPhysics(dt: number, justLanded: boolean)
 
 	local slopeHorizontal = Vector3.new(slopeAcceleration.X, 0, slopeAcceleration.Z)
 	if isSkiing then
-		local inputAcceleration = Input.moveVector * (Constants.WALK_SPEED * 0.38)
-		horizontalVel = horizontalVel:Lerp(Vector3.zero, math.clamp(Constants.SKI_GROUND_FRICTION * dt, 0, 1))
-		horizontalVel += (slopeHorizontal + inputAcceleration) * dt
+		-- Auf flachem Boden bleibt nur vorhandenes Momentum erhalten.
+		-- Neue Geschwindigkeit entsteht durch Gefälle, nicht durch WASD.
+		horizontalVel *= math.exp(-Constants.SKI_GROUND_FRICTION * dt)
+		horizontalVel += slopeHorizontal * dt
+
+		-- Tribes-artige Glockenkurve: Steuerung ist bei mittlerer bis hoher
+		-- Geschwindigkeit am stärksten, verändert aber nicht den Speed.
+		local speed = horizontalVel.Magnitude
+		if speed > 0.5 and Input.moveVector.Magnitude > 0 then
+			local offset = (speed - Constants.SKI_PEAK_CONTROL_SPEED) / Constants.SKI_CONTROL_WIDTH
+			local controlFactor = math.exp(-(offset * offset))
+			local controlRate = Constants.SKI_MIN_CONTROL_RATE + (
+				Constants.SKI_MAX_CONTROL_RATE - Constants.SKI_MIN_CONTROL_RATE
+			) * controlFactor
+			local desiredVelocity = Input.moveVector * speed
+			local steeredVelocity = horizontalVel:Lerp(
+				desiredVelocity,
+				math.clamp(controlRate * dt, 0, 1)
+			)
+			if steeredVelocity.Magnitude > 0.001 then
+				horizontalVel = steeredVelocity.Unit * speed
+			end
+		end
 	else
 		local desiredVel = Input.moveVector * Constants.WALK_SPEED
 		horizontalVel = horizontalVel:Lerp(desiredVel, math.clamp(Constants.WALK_GROUND_FRICTION * dt, 0, 1))
@@ -177,7 +197,15 @@ local function applyJetpack(dt: number)
 		local thrust = Constants.JETPACK_THRUST_START + (
 			Constants.JETPACK_THRUST_MAX - Constants.JETPACK_THRUST_START
 		) * State.jetpackThrustAlpha
-		State.velocity += Vector3.new(0, thrust * dt, 0)
+		local speedRatio = math.clamp(
+			State.velocity.Magnitude / Constants.JETPACK_SOFT_CAP_SPEED,
+			0,
+			1
+		)
+		local thrustScale = 1 - (
+			speedRatio * speedRatio
+		) * (1 - Constants.JETPACK_MIN_THRUST_SCALE)
+		State.velocity += Vector3.new(0, thrust * thrustScale * dt, 0)
 		State.jetpackEnergy = math.max(0, State.jetpackEnergy - Constants.JETPACK_DRAIN_RATE * dt)
 		State.lastThrustTime = os.clock()
 	else
@@ -211,7 +239,8 @@ RunService.Heartbeat:Connect(function(dt)
 		applySkiPhysics(dt, justLanded)
 	else
 		State.isSkiing = false
-		State.velocity += Vector3.new(0, -Constants.GRAVITY * dt, 0)
+		local gravityScale = isJetpacking and Constants.JETPACK_GRAVITY_SCALE or 1
+		State.velocity += Vector3.new(0, -Constants.GRAVITY * gravityScale * dt, 0)
 
 		-- Eine kontrollierte horizontale Luftbeschleunigung statt zweier
 		-- addierter Forward-Boosts.
