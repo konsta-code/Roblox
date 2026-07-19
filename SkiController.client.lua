@@ -47,6 +47,8 @@ local function setupCharacter(newCharacter: Model)
 	groundParams.FilterDescendantsInstances = { character }
 
 	State.velocity = Vector3.zero
+	State.isGrounded = false
+	State.isSkiing = false
 	State.jetpackEnergy = Constants.JETPACK_MAX_ENERGY
 	State.wasGrounded = false
 end
@@ -106,27 +108,40 @@ end
 
 -- === Ski-Physik ===
 
-local function applySkiPhysics(dt: number)
-	local slopeAngle = math.deg(math.acos(math.clamp(State.groundNormal:Dot(Vector3.yAxis), -1, 1)))
-	local isSkiing = Input.jumpHeld and slopeAngle > Constants.SKI_MIN_SLOPE_ANGLE
+local function applySkiPhysics(dt: number, justLanded: boolean)
+	local normal = State.groundNormal
+	local slopeAngle = math.deg(math.acos(math.clamp(normal:Dot(Vector3.yAxis), -1, 1)))
+	local isSkiing = Input.jumpHeld
 	State.isSkiing = isSkiing
 
-	local slopeDir = Vector3.new(State.groundNormal.X, 0, State.groundNormal.Z)
-	if slopeDir.Magnitude > 0.01 then
-		slopeDir = slopeDir.Unit
+	-- Projiziert die Gravitation auf die Bodenebene. Die Hangbeschleunigung
+	-- wächst dadurch natürlich mit der Neigung.
+	local gravity = Vector3.new(0, -Constants.GRAVITY, 0)
+	local slopeAcceleration = gravity - normal * gravity:Dot(normal)
+	if slopeAngle < Constants.SKI_MIN_SLOPE_ANGLE then
+		slopeAcceleration = Vector3.zero
+	else
+		slopeAcceleration *= Constants.SKI_SLOPE_FORCE_MULT
 	end
-	local slopeForce = slopeDir * Constants.GRAVITY * (Constants.SKI_SLOPE_FORCE_MULT or 1.65)
 
 	local horizontalVel = Vector3.new(State.velocity.X, 0, State.velocity.Z)
 
+	-- Behält beim Aufsetzen die Geschwindigkeit entlang der Oberfläche.
+	-- Dadurch wird ein Sturz auf einen Hang zu kontrollierbarem Momentum.
+	if isSkiing and justLanded and State.velocity.Y < 0 then
+		local surfaceVelocity = State.velocity - normal * State.velocity:Dot(normal)
+		local landingHorizontal = Vector3.new(surfaceVelocity.X, 0, surfaceVelocity.Z)
+		horizontalVel = horizontalVel:Lerp(landingHorizontal, Constants.LANDING_VELOCITY_TRANSFER)
+	end
+
+	local slopeHorizontal = Vector3.new(slopeAcceleration.X, 0, slopeAcceleration.Z)
 	if isSkiing then
-		local inputForce = Input.moveVector * (Constants.WALK_SPEED * 0.38)
+		local inputAcceleration = Input.moveVector * (Constants.WALK_SPEED * 0.38)
 		horizontalVel = horizontalVel:Lerp(Vector3.zero, math.clamp(Constants.SKI_GROUND_FRICTION * dt, 0, 1))
-		horizontalVel += slopeForce * dt + inputForce * dt
+		horizontalVel += (slopeHorizontal + inputAcceleration) * dt
 	else
 		local desiredVel = Input.moveVector * Constants.WALK_SPEED
 		horizontalVel = horizontalVel:Lerp(desiredVel, math.clamp(Constants.WALK_GROUND_FRICTION * dt, 0, 1))
-		horizontalVel += slopeForce * dt * 0.35
 	end
 
 	if horizontalVel.Magnitude > Constants.MAX_SKI_SPEED then
@@ -156,8 +171,7 @@ local function applyJetpack(dt: number)
 	local wantsThrust = Input.jetpackHeld and State.jetpackEnergy > 0
 
 	if wantsThrust then
-		local forwardBoost = Input.moveVector * Constants.JETPACK_THRUST_FORCE * (Constants.JETPACK_FORWARD_MULT or 0.72) * dt
-		State.velocity += Vector3.new(0, Constants.JETPACK_THRUST_FORCE * dt, 0) + forwardBoost
+		State.velocity += Vector3.new(0, Constants.JETPACK_THRUST_FORCE * dt, 0)
 		State.jetpackEnergy = math.max(0, State.jetpackEnergy - Constants.JETPACK_DRAIN_RATE * dt)
 		State.lastThrustTime = os.clock()
 	elseif os.clock() - State.lastThrustTime > Constants.JETPACK_REGEN_DELAY then
@@ -177,33 +191,22 @@ RunService.Heartbeat:Connect(function(dt)
 	State.isGrounded = grounded
 	State.groundNormal = normal
 
-	-- Velocity-Transfer beim Landen (Fallgeschwindigkeit → horizontale Speed)
-	if grounded and not State.wasGrounded then
-		local fallSpeed = math.abs(math.min(State.velocity.Y, 0))
-		if fallSpeed > 5 then
-			local horizontal = Vector3.new(State.velocity.X, 0, State.velocity.Z)
-			local transfer = fallSpeed * (Constants.LANDING_VELOCITY_TRANSFER or 0.92)
-			local boostDir = horizontal.Magnitude > 1 and horizontal.Unit or (Input.moveVector.Magnitude > 0 and Input.moveVector or Vector3.new(0, 0, -1))
-			State.velocity = Vector3.new(
-				State.velocity.X + boostDir.X * transfer * 0.6,
-				0,
-				State.velocity.Z + boostDir.Z * transfer * 0.6
-			)
-		end
-	end
+	local justLanded = grounded and not State.wasGrounded
 	State.wasGrounded = grounded
 
 	if grounded and not Input.jetpackHeld then
-		applySkiPhysics(dt)
+		applySkiPhysics(dt, justLanded)
 	else
-		-- Airborne
+		State.isSkiing = false
 		State.velocity += Vector3.new(0, -Constants.GRAVITY * dt, 0)
 
-		local airControl = Input.moveVector * (Constants.WALK_SPEED * 0.6) * dt
-		if Input.jetpackHeld then
-			airControl *= 1.55
-		end
-		State.velocity += airControl
+		-- Eine kontrollierte horizontale Luftbeschleunigung statt zweier
+		-- addierter Forward-Boosts.
+		local isJetpacking = Input.jetpackHeld and State.jetpackEnergy > 0
+		local airAcceleration = isJetpacking
+			and Constants.JETPACK_AIR_CONTROL_ACCELERATION
+			or Constants.AIR_CONTROL_ACCELERATION
+		State.velocity += Input.moveVector * airAcceleration * dt
 	end
 
 	applyJetpack(dt)

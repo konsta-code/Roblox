@@ -6,7 +6,7 @@ local Constants = {}
 
 -- Grundbewegung
 Constants.WALK_SPEED = 16
-Constants.MAX_SKI_SPEED = 220          -- höherer Soft-Cap
+Constants.MAX_SKI_SPEED = 220          -- Sicherheitsgrenze gegen instabile Extremgeschwindigkeiten
 Constants.GRAVITY = 100                -- stärkere Gravitation für schnelleres "Fallen = Speed"
 Constants.JUMP_POWER = 48              -- etwas schwächerer Jump (Original war nicht stark)
 
@@ -22,10 +22,11 @@ Constants.JETPACK_DRAIN_RATE = 36
 Constants.JETPACK_REGEN_RATE = 24
 Constants.JETPACK_REGEN_DELAY = 0.35
 Constants.JETPACK_THRUST_FORCE = 175
-Constants.JETPACK_FORWARD_MULT = 0.72  -- mehr Forward-Thrust (wichtig!)
+Constants.AIR_CONTROL_ACCELERATION = 9
+Constants.JETPACK_AIR_CONTROL_ACCELERATION = 14
 
 -- Ground Detection + Landing
 Constants.GROUND_CHECK_DISTANCE = 4.0
-Constants.LANDING_VELOCITY_TRANSFER = 0.92  -- fast volle Übernahme der Fallgeschwindigkeit
+Constants.LANDING_VELOCITY_TRANSFER = 0.92  -- Anteil der tangentialen Landegeschwindigkeit
 
 return Constants
