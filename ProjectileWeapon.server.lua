@@ -106,7 +106,7 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	flash:Emit(math.clamp(math.floor(profile.splashRadius * 1.5), 12, 38))
 
 	local impactSound = Instance.new("Sound")
-	impactSound.SoundId = "rbxasset://sounds/collide.wav"
+	impactSound.SoundId = "rbxasset://sounds/impact_explosion_03.mp3"
 	impactSound.Volume = 0.5
 	impactSound.PlaybackSpeed = math.clamp(1.25 - profile.splashRadius / 70, 0.72, 1.05)
 	impactSound.RollOffMinDistance = 10
@@ -168,6 +168,24 @@ local function hitHumanoid(instance: Instance): Humanoid?
 	local model = instance:FindFirstAncestorOfClass("Model")
 	if not model then return nil end
 	return model:FindFirstChildOfClass("Humanoid")
+end
+
+local function directHitAward(humanoid: Humanoid, profile: ClassKitConstants.DiscProfile): string?
+	if not string.find(profile.name, "Spinfusor", 1, true) then
+		return nil
+	end
+	local character = humanoid.Parent
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not character or not root or not root:IsA("BasePart") or root.AssemblyLinearVelocity.Magnitude < 18 then
+		return nil
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character }
+	if workspace:Raycast(root.Position, Vector3.new(0, -8, 0), params) then
+		return nil
+	end
+	return "BLUE PLATE SPECIAL"
 end
 
 local function findHomingTarget(
@@ -283,6 +301,7 @@ fireEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 	if not character or not humanoid or humanoid.Health <= 0
 		or not root or not root:IsA("BasePart") then return end
 
+	CombatService.BreakSpawnProtection(player)
 	lastFireTime[player] = now
 	local burstCount = math.clamp(math.floor(profile.burstCount or 1), 1, 6)
 	local burstInterval = math.clamp(profile.burstInterval or 0, 0, 0.4)
@@ -334,11 +353,13 @@ RunService.Heartbeat:Connect(function(dt)
 					or directPlayer == projectile.shooter
 					or directPlayer.Team ~= projectile.shooter.Team
 				if directHumanoid and directHumanoid.Health > 0 and canDamageDirect then
+					local award = directHitAward(directHumanoid, projectile.profile)
 					CombatService.Damage(
 						projectile.shooter,
 						directHumanoid,
 						projectile.profile.directDamage,
-						projectile.profile.name
+						projectile.profile.name,
+						award
 					)
 				else
 					directHumanoid = nil

@@ -132,15 +132,15 @@ WeaponFeedback.Fired:Connect(function(weapon: WeaponFeedback.Weapon)
 		local pitch = math.clamp(1.45 - kit.automatic.damagePerHit / 30, 0.72, 1.35)
 		playOneShot("rbxasset://sounds/electronicpingshort.wav", 0.22, pitch)
 	elseif weapon == "Grenade" then
-		playOneShot("rbxasset://sounds/swoosh.wav", 0.32, 0.9)
+		playOneShot("rbxasset://sounds/action_jump.mp3", 0.28, 0.82)
 	elseif weapon == "Melee" then
-		playOneShot("rbxasset://sounds/swoosh.wav", 0.38, 1.35)
+		playOneShot("rbxasset://sounds/action_jump.mp3", 0.34, 1.28)
 	end
 end)
 
 local wind = Instance.new("Sound")
 wind.Name = "SkiWind"
-wind.SoundId = "rbxasset://sounds/swoosh.wav"
+wind.SoundId = "rbxasset://sounds/action_falling.ogg"
 wind.Looped = true
 wind.Volume = 0
 wind.PlaybackSpeed = 0.45
@@ -149,7 +149,7 @@ wind:Play()
 
 local jet = Instance.new("Sound")
 jet.Name = "JetpackLoop"
-jet.SoundId = "rbxasset://sounds/swoosh.wav"
+jet.SoundId = "rbxasset://sounds/action_falling.ogg"
 jet.Looped = true
 jet.Volume = 0
 jet.PlaybackSpeed = 1.7

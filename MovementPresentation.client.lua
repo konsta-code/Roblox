@@ -104,7 +104,7 @@ end
 
 local function playLanding(volume: number)
 	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxasset://sounds/collide.wav"
+	sound.SoundId = "rbxasset://sounds/action_jump_land.mp3"
 	sound.Volume = volume
 	sound.PlaybackSpeed = 0.82 + math.random() * 0.12
 	sound.Parent = SoundService

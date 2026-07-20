@@ -1,0 +1,121 @@
+{
+  "blend_file": "C:\\Users\\konst\\OneDrive\\Desktop\\Roblox\\art_source\\weapons\\spinfusor\\blockout_v01\\WP_Spinfusor_Blockout_v01.blend",
+  "object_names_valid": true,
+  "objects": [
+    "WP_Barrel",
+    "WP_DiscChamber",
+    "WP_EnergyRing",
+    "WP_FrontSupport",
+    "WP_Grip",
+    "WP_LowerArmor",
+    "WP_MainBody",
+    "WP_Muzzle",
+    "WP_MuzzleAttachment",
+    "WP_RearBrace",
+    "WP_UpperArmor"
+  ],
+  "dimensions_xyz": [
+    1.328,
+    5.5,
+    1.71
+  ],
+  "bounds_min_xyz": [
+    -0.664,
+    -2.75,
+    -0.855
+  ],
+  "bounds_max_xyz": [
+    0.664,
+    2.75,
+    0.855
+  ],
+  "length_along_y": 5.5,
+  "max_width_x": 1.328,
+  "max_height_z": 1.71,
+  "triangles_by_object": {
+    "WP_MainBody": 256,
+    "WP_Barrel": 166,
+    "WP_Muzzle": 180,
+    "WP_DiscChamber": 332,
+    "WP_EnergyRing": 1152,
+    "WP_UpperArmor": 168,
+    "WP_LowerArmor": 168,
+    "WP_Grip": 180,
+    "WP_RearBrace": 540,
+    "WP_FrontSupport": 146,
+    "WP_MuzzleAttachment": 500
+  },
+  "triangles_total": 3788,
+  "modifier_audit": {
+    "WP_MainBody": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_Barrel": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_Muzzle": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_DiscChamber": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_EnergyRing": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_UpperArmor": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_LowerArmor": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_Grip": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_RearBrace": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_FrontSupport": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ],
+    "WP_MuzzleAttachment": [
+      "MIRROR",
+      "BEVEL",
+      "WEIGHTED_NORMAL"
+    ]
+  },
+  "disc_origin": [
+    0.0,
+    -0.25,
+    0.07
+  ],
+  "energy_ring_origin": [
+    0.0,
+    -0.25,
+    0.07
+  ],
+  "materials": [
+    "MAT_Graphite",
+    "MAT_Ivory",
+    "MAT_Orange_Emission"
+  ]
+}

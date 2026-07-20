@@ -208,6 +208,7 @@ throwEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 		return
 	end
 
+	CombatService.BreakSpawnProtection(player)
 	lastThrow[player] = now
 	setGrenadeAmmo(player, ammo - 1)
 	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).grenade
@@ -267,6 +268,7 @@ meleeEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 	if horizontalAim.Magnitude > 0.05 and horizontalAim.Unit:Dot(root.CFrame.LookVector) < 0.35 then
 		return
 	end
+	CombatService.BreakSpawnProtection(player)
 	lastMelee[player] = now
 
 	local target = findMeleeTarget(player, root.Position + Vector3.yAxis * 1.5, aimDirection)

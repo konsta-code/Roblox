@@ -35,7 +35,7 @@ gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local root = Instance.new("Frame")
-root.Size = UDim2.fromOffset(720, 420)
+root.Size = UDim2.fromOffset(900, 440)
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.45)
 root.BackgroundColor3 = Color3.fromRGB(10, 14, 20)
@@ -90,7 +90,7 @@ local function makeColumn(teamName: string, xScale: number, color: Color3): Colu
 	legend.TextSize = 11
 	legend.TextColor3 = Color3.fromRGB(150, 162, 178)
 	legend.TextXAlignment = Enum.TextXAlignment.Left
-	legend.Text = "SPIELER                                    CAPS   K   D"
+	legend.Text = "SPIELER          KLASSE       PTS  CAP  K  A  D"
 	legend.Parent = frame
 
 	local list = Instance.new("Frame")
@@ -113,14 +113,41 @@ local columns: { [string]: ColumnParts } = {
 }
 
 local function statValue(p: Player, name: string): number
+	local roundValue = p:GetAttribute("Round" .. name)
+	if typeof(roundValue) == "number" then
+		return roundValue
+	end
 	local leaderstats = p:FindFirstChild("leaderstats")
 	local stat = leaderstats and leaderstats:FindFirstChild(name)
 	return (stat and stat:IsA("IntValue")) and stat.Value or 0
 end
 
-type RowInfo = { player: Player, kills: number, deaths: number, captures: number }
+type RowInfo = {
+	player: Player,
+	kills: number,
+	deaths: number,
+	captures: number,
+	assists: number,
+	score: number,
+}
+
+local function shortText(value: string, length: number): string
+	return if #value > length then string.sub(value, 1, length - 1) .. "." else value
+end
 
 local function refresh()
+	local phase = ReplicatedStorage:GetAttribute("MatchPhase")
+	if phase == "Overtime" then
+		title.Text = "OVERTIME // NEXT CAP WINS"
+		title.TextColor3 = Color3.fromRGB(255, 190, 70)
+	elseif phase == "PostMatch" then
+		local mvp = ReplicatedStorage:GetAttribute("MatchMVP")
+		title.Text = if typeof(mvp) == "string" then "MATCH RESULT // MVP " .. string.upper(mvp) else "MATCH RESULT"
+		title.TextColor3 = Color3.fromRGB(112, 244, 185)
+	else
+		title.Text = "CAPTURE THE FLAG"
+		title.TextColor3 = Color3.fromRGB(235, 242, 252)
+	end
 	for teamName, column in columns do
 		local team = Teams:FindFirstChild(teamName)
 		local score = ReplicatedStorage:GetAttribute("CTFScore_" .. teamName)
@@ -146,10 +173,14 @@ local function refresh()
 				kills = statValue(p, "Kills"),
 				deaths = statValue(p, "Deaths"),
 				captures = statValue(p, "Captures"),
+				assists = statValue(p, "Assists"),
+				score = statValue(p, "Score"),
 			})
 		end
 		table.sort(rows, function(a, b)
-			if a.captures ~= b.captures then
+			if a.score ~= b.score then
+				return a.score > b.score
+			elseif a.captures ~= b.captures then
 				return a.captures > b.captures
 			end
 			return a.kills > b.kills
@@ -163,16 +194,18 @@ local function refresh()
 			row.BackgroundTransparency = info.player == player and 0.2 or 0.5
 			row.BorderSizePixel = 0
 			row.Font = Enum.Font.Gotham
-			row.TextSize = 13
+			row.TextSize = 11
 			row.TextColor3 = Color3.fromRGB(226, 233, 244)
 			row.TextXAlignment = Enum.TextXAlignment.Left
 			row.LayoutOrder = order
 			row.Text = string.format(
-				"  %-20s %-12s %3d  %3d %3d",
-				info.player.DisplayName,
-				typeof(loadout) == "string" and string.upper(loadout) or "?",
+				" %-14s %-10s %4d  %2d %2d %2d %2d",
+				shortText(info.player.DisplayName, 14),
+				shortText(typeof(loadout) == "string" and string.upper(loadout) or "?", 10),
+				info.score,
 				info.captures,
 				info.kills,
+				info.assists,
 				info.deaths
 			)
 			row.Parent = column.list

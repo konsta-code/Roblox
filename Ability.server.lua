@@ -189,6 +189,7 @@ activateEvent.OnServerEvent:Connect(function(player: Player)
 	local loadout = player:GetAttribute("Loadout")
 	if typeof(loadout) ~= "string" or not AbilityConstants.ABILITIES[loadout] then return end
 	local definition = AbilityConstants.Get(loadout)
+	CombatService.BreakSpawnProtection(player)
 	local activeUntil = now + definition.duration
 	player:SetAttribute("AbilityReadyAt", now + definition.cooldown)
 	player:SetAttribute("AbilityActiveUntil", activeUntil)

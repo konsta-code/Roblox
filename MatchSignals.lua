@@ -6,7 +6,7 @@
 
 local MatchSignals = {}
 
-export type MatchPhase = "Warmup" | "InProgress" | "PostMatch"
+export type MatchPhase = "Warmup" | "InProgress" | "Overtime" | "PostMatch"
 
 local currentPhase: MatchPhase = "Warmup"
 local phaseChanged = Instance.new("BindableEvent")

@@ -16,6 +16,8 @@
 -- Das Haupt-Terrain ist EINE bündig verbundene Fläche (keine Momentum-Nähte).
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Teams = game:GetService("Teams")
 
 workspace.Gravity = 0
@@ -55,6 +57,7 @@ local function slab(name, size, cframe, color, material, parent, canCollide)
 	p.Color = color
 	p.Material = material or Enum.Material.SmoothPlastic
 	p.CanCollide = if canCollide == nil then true else canCollide
+	p.CanTouch = false
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Parent = parent
@@ -87,10 +90,32 @@ local function skiRamp(name, x0, y0, x1, y1, width, zCenter, color, material, pa
 	)
 end
 
+-- Ramp along Z, used to connect the longitudinal ski corridors.
+local function skiRampZ(name, z0, y0, z1, y1, width, xCenter, color, material, parent, thickness)
+	local run = z1 - z0
+	local rise = y1 - y0
+	local length = math.sqrt(run * run + rise * rise)
+	local theta = math.atan2(rise, run)
+	thickness = thickness or 55
+	local midZ = (z0 + z1) / 2
+	local midY = (y0 + y1) / 2
+	local cz = midZ + (thickness / 2) * math.sin(theta)
+	local cy = midY - (thickness / 2) * math.cos(theta)
+	return slab(
+		name,
+		Vector3.new(width, thickness, length),
+		CFrame.new(xCenter, cy, cz) * CFrame.Angles(-theta, 0, 0),
+		color,
+		material,
+		parent,
+		true
+	)
+end
+
 -- ============================================================
 -- 1. BODEN (Fangfläche, verhindert Endlos-Fall am Start)
 -- ============================================================
-slab("Ground", Vector3.new(900, 60, 560), CFrame.new(0, -30, 0), COL_ROCK, Enum.Material.Rock, map, true)
+slab("Ground", Vector3.new(1500, 70, 1000), CFrame.new(0, -70, 0), COL_ROCK, Enum.Material.Rock, map, true)
 
 -- ============================================================
 -- 2. HAUPT-TERRAIN (durchgehende Ski-Fläche, Breite 240)
@@ -99,13 +124,34 @@ local terrain = Instance.new("Folder")
 terrain.Name = "Terrain"
 terrain.Parent = map
 
-local W = 240
-skiRamp("L1_BaseDescent", -230, 24, -150, 2, W, 0, COL_ICE, Enum.Material.Ice, terrain)
-skiRamp("L2_Valley", -150, 2, -80, 0, W, 0, COL_SNOW, Enum.Material.Snow, terrain)
-skiRamp("L3_RidgeClimb", -80, 0, 0, 28, W, 0, COL_ICE, Enum.Material.Ice, terrain)
-skiRamp("R3_RidgeDrop", 0, 28, 80, 0, W, 0, COL_ICE, Enum.Material.Ice, terrain)
-skiRamp("R2_Valley", 80, 0, 150, 2, W, 0, COL_SNOW, Enum.Material.Snow, terrain)
-skiRamp("R1_BaseAscent", 150, 2, 230, 24, W, 0, COL_ICE, Enum.Material.Ice, terrain)
+local W = 300
+local mainProfile = {
+	{ -535, 24 },
+	{ -450, -4 },
+	{ -345, 25 },
+	{ -235, -12 },
+	{ -120, 38 },
+	{ 0, -8 },
+	{ 120, 38 },
+	{ 235, -12 },
+	{ 345, 25 },
+	{ 450, -4 },
+	{ 535, 24 },
+}
+for index = 1, #mainProfile - 1 do
+	local a = mainProfile[index]
+	local b = mainProfile[index + 1]
+	skiRamp(
+		"MainRoute_" .. index,
+		a[1], a[2], b[1], b[2], W, 0,
+		if index % 3 == 0 then COL_SNOW else COL_ICE,
+		if index % 3 == 0 then Enum.Material.Snow else Enum.Material.Ice,
+		terrain
+	)
+end
+
+slab("RedRouteHub", Vector3.new(30, 8, 880), CFrame.new(-535, 20, 0), COL_SNOW, Enum.Material.Snow, terrain, true)
+slab("BlueRouteHub", Vector3.new(30, 8, 880), CFrame.new(535, 20, 0), COL_SNOW, Enum.Material.Snow, terrain, true)
 
 -- ============================================================
 -- 3. SPRUNGSCHANZEN (in den Tälern, schmaler -> optional anfahrbar)
@@ -116,8 +162,15 @@ local kickers = Instance.new("Folder")
 kickers.Name = "Kickers"
 kickers.Parent = map
 
-skiRamp("LeftKicker", -135, 1.5, -120, 10, 70, 0, COL_SNOW, Enum.Material.Glacier, kickers, 14)
-skiRamp("RightKicker", 135, 1.5, 120, 10, 70, 0, COL_SNOW, Enum.Material.Glacier, kickers, 14)
+local mainKickers = {
+	{ "WestOuter", -462, -3, -442, 13 },
+	{ "WestInner", -247, -10, -225, 14 },
+	{ "EastInner", 247, -10, 225, 14 },
+	{ "EastOuter", 462, -3, 442, 13 },
+}
+for _, kicker in mainKickers do
+	skiRamp(kicker[1], kicker[2], kicker[3], kicker[4], kicker[5], 78, 0, COL_SNOW, Enum.Material.Glacier, kickers, 14)
+end
 
 -- ============================================================
 -- 3b. SEITEN-ROUTEN (Nord z=-190 / Süd z=+190, Breite 140)
@@ -131,20 +184,73 @@ local sideRoutes = Instance.new("Folder")
 sideRoutes.Name = "SideRoutes"
 sideRoutes.Parent = map
 
-for _, zc in { -190, 190 } do
+for _, zc in { -250, 250 } do
 	local suffix = if zc < 0 then "N" else "S"
-	local SW = 140
-	skiRamp("Side1_" .. suffix, -230, 24, -160, 4, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
-	skiRamp("Side2_" .. suffix, -160, 4, -90, 14, SW, zc, COL_SNOW, Enum.Material.Snow, sideRoutes)
-	skiRamp("Side3_" .. suffix, -90, 14, 0, 2, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
-	skiRamp("Side4_" .. suffix, 0, 2, 90, 14, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
-	skiRamp("Side5_" .. suffix, 90, 14, 160, 4, SW, zc, COL_SNOW, Enum.Material.Snow, sideRoutes)
-	skiRamp("Side6_" .. suffix, 160, 4, 230, 24, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
+	local SW = 200
+	local sideProfile = {
+		{ -535, 24 }, { -420, 6 }, { -320, 28 }, { -210, -14 }, { -100, 22 },
+		{ 0, 46 }, { 100, 22 }, { 210, -14 }, { 320, 28 }, { 420, 6 }, { 535, 24 },
+	}
+	for index = 1, #sideProfile - 1 do
+		local a = sideProfile[index]
+		local b = sideProfile[index + 1]
+		skiRamp(
+			string.format("SideRoute_%s_%d", suffix, index),
+			a[1], a[2], b[1], b[2], SW, zc,
+			if index % 2 == 0 then COL_SNOW else COL_ICE,
+			if index % 2 == 0 then Enum.Material.Snow else Enum.Material.Ice,
+			sideRoutes
+		)
+	end
+	skiRamp("SideKickerA_" .. suffix, -220, -12, -198, 13, 62, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
+	skiRamp("SideKickerB_" .. suffix, 220, -12, 198, 13, 62, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
+end
 
-	-- Kicker in der Senken-Mitte, je einer pro Fahrtrichtung (schmal genug,
-	-- um mittig dran vorbeizufahren)
-	skiRamp("SideKickerA_" .. suffix, -8, 2.2, -26, 12, 56, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
-	skiRamp("SideKickerB_" .. suffix, 8, 2.2, 26, 12, 56, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
+local rimRoutes = Instance.new("Folder")
+rimRoutes.Name = "HighlandRimRoutes"
+rimRoutes.Parent = map
+for _, zc in { -395, 395 } do
+	local suffix = if zc < 0 then "N" else "S"
+	local rimProfile = {
+		{ -535, 24 }, { -420, 46 }, { -300, 8 }, { -170, 58 }, { 0, 20 },
+		{ 170, 58 }, { 300, 8 }, { 420, 46 }, { 535, 24 },
+	}
+	for index = 1, #rimProfile - 1 do
+		local a = rimProfile[index]
+		local b = rimProfile[index + 1]
+		skiRamp(
+			string.format("Highland_%s_%d", suffix, index),
+			a[1], a[2], b[1], b[2], 90, zc,
+			COL_SNOW, Enum.Material.Glacier, rimRoutes, 70
+		)
+	end
+end
+
+local crossRoutes = Instance.new("Folder")
+crossRoutes.Name = "CrossRoutes"
+crossRoutes.Parent = map
+local crossDefinitions = {
+	{ -450, -4, 14, 46 },
+	{ -235, -12, -5, 28 },
+	{ 0, -8, 46, 20 },
+	{ 235, -12, -5, 28 },
+	{ 450, -4, 14, 46 },
+}
+for index, cross in crossDefinitions do
+	local x, mainY, sideY, rimY = cross[1], cross[2], cross[3], cross[4]
+	for _, direction in { -1, 1 } do
+		local suffix = if direction < 0 then "N" else "S"
+		skiRampZ(
+			string.format("MainToSide_%s_%d", suffix, index),
+			direction * 130, mainY, direction * 175, sideY, 74, x,
+			COL_ICE, Enum.Material.Ice, crossRoutes, 34
+		)
+		skiRampZ(
+			string.format("SideToRim_%s_%d", suffix, index),
+			direction * 330, sideY, direction * 360, rimY, 74, x,
+			COL_SNOW, Enum.Material.Glacier, crossRoutes, 30
+		)
+	end
 end
 
 -- ============================================================
@@ -158,8 +264,8 @@ local backfield = Instance.new("Folder")
 backfield.Name = "Backfield"
 backfield.Parent = map
 
-skiRamp("RedBackfield", -390, 30, -300, 0, 520, 0, COL_SNOW, Enum.Material.Snow, backfield)
-skiRamp("BlueBackfield", 300, 0, 390, 30, 520, 0, COL_SNOW, Enum.Material.Snow, backfield)
+skiRamp("RedBackfield", -740, 62, -605, 0, 880, 0, COL_SNOW, Enum.Material.Snow, backfield)
+skiRamp("BlueBackfield", 605, 0, 740, 62, 880, 0, COL_SNOW, Enum.Material.Snow, backfield)
 
 -- ============================================================
 -- 4. CANYON-SILHOUETTE UND ROUTENLICHTER
@@ -172,15 +278,19 @@ scenery.Parent = map
 
 -- z=±272: hinter den Seiten-Routen (enden bei ±260), vor dem Weltrand (±280)
 local spires = {
-	{ -215, -272, 38, -12 },
-	{ -174, 271, 54, 9 },
-	{ -126, -273, 42, 15 },
-	{ -72, 272, 62, -7 },
-	{ -18, -271, 48, 11 },
-	{ 38, 272, 58, -13 },
-	{ 91, -272, 46, 7 },
-	{ 146, 271, 66, -10 },
-	{ 204, -273, 51, 12 },
+	{ -620, -472, 66, -12 },
+	{ -545, 470, 92, 9 },
+	{ -450, -474, 74, 15 },
+	{ -350, 472, 108, -7 },
+	{ -245, -470, 82, 11 },
+	{ -130, 473, 98, -13 },
+	{ -20, -472, 78, 7 },
+	{ 95, 470, 112, -10 },
+	{ 210, -474, 86, 12 },
+	{ 330, 472, 104, -8 },
+	{ 445, -470, 76, 10 },
+	{ 560, 473, 96, -11 },
+	{ 650, -472, 70, 8 },
 }
 
 for index, definition in spires do
@@ -211,8 +321,8 @@ local routeLights = Instance.new("Folder")
 routeLights.Name = "RouteLights"
 routeLights.Parent = scenery
 
-for x = -200, 200, 40 do
-	for _, z in { -112, 112, -252, 252 } do
+for x = -500, 500, 100 do
+	for _, z in { -145, 145, -345, 345, -445, 445 } do
 		local teamColor = if x < 0 then COL_RED elseif x > 0 then COL_BLUE else Color3.fromRGB(105, 232, 255)
 		local post = slab(
 			string.format("RouteLight_%d_%d", x, z),
@@ -244,6 +354,47 @@ for x = -200, 200, 40 do
 		light.Shadows = false
 		light.Parent = beacon
 	end
+end
+
+local routeLandmarks = {
+	{ "CORE BOWL", Vector3.new(0, 18, 0), Color3.fromRGB(105, 232, 255) },
+	{ "NORTH FLANK", Vector3.new(0, 63, -250), Color3.fromRGB(145, 220, 255) },
+	{ "SOUTH FLANK", Vector3.new(0, 63, 250), Color3.fromRGB(145, 220, 255) },
+	{ "NORTH RIDGE", Vector3.new(0, 38, -395), Color3.fromRGB(225, 238, 250) },
+	{ "SOUTH RIDGE", Vector3.new(0, 38, 395), Color3.fromRGB(225, 238, 250) },
+}
+for index, landmark in routeLandmarks do
+	local marker = slab(
+		"RouteLandmark" .. index,
+		Vector3.new(1.5, 18, 1.5),
+		CFrame.new(landmark[2]),
+		landmark[3],
+		Enum.Material.Neon,
+		scenery,
+		false
+	)
+	marker.CanQuery = false
+	local label = Instance.new("BillboardGui")
+	label.Name = "RouteName"
+	label.Size = UDim2.fromOffset(230, 36)
+	label.StudsOffset = Vector3.new(0, 12, 0)
+	label.AlwaysOnTop = true
+	label.MaxDistance = 900
+	label.Parent = marker
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.fromScale(1, 1)
+	textLabel.BackgroundColor3 = Color3.fromRGB(8, 13, 20)
+	textLabel.BackgroundTransparency = 0.28
+	textLabel.BorderSizePixel = 0
+	textLabel.Font = Enum.Font.GothamBlack
+	textLabel.Text = landmark[1]
+	textLabel.TextColor3 = landmark[3]
+	textLabel.TextSize = 14
+	textLabel.TextStrokeTransparency = 0.4
+	textLabel.Parent = label
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = textLabel
 end
 
 for _, z in { -103, 103 } do
@@ -291,14 +442,14 @@ for _, setup in baseSetups do
 	base.Parent = map
 
 	local s = setup.sign
-	local baseX = 262 * s
+	local baseX = 570 * s
 	local facing = -s -- Richtung Mitte
 
-	slab("Platform", Vector3.new(70, 8, 96), CFrame.new(baseX, 20, 0), setup.col, Enum.Material.Metal, base, true)
-	slab("BackWall", Vector3.new(4, 26, 96), CFrame.new(baseX - facing * 33, 37, 0), COL_DARK, Enum.Material.Metal, base, true)
-	slab("SideWallA", Vector3.new(70, 16, 4), CFrame.new(baseX, 32, -46), COL_DARK, Enum.Material.Metal, base, true)
-	slab("SideWallB", Vector3.new(70, 16, 4), CFrame.new(baseX, 32, 46), COL_DARK, Enum.Material.Metal, base, true)
-	slab("Roof", Vector3.new(48, 2, 64), CFrame.new(baseX - facing * 8, 45, 0), COL_METAL, Enum.Material.Metal, base, true)
+	slab("Platform", Vector3.new(90, 8, 126), CFrame.new(baseX, 20, 0), setup.col, Enum.Material.Metal, base, true)
+	slab("BackWall", Vector3.new(4, 30, 126), CFrame.new(baseX - facing * 43, 39, 0), COL_DARK, Enum.Material.Metal, base, true)
+	slab("SideWallA", Vector3.new(90, 18, 4), CFrame.new(baseX, 33, -61), COL_DARK, Enum.Material.Metal, base, true)
+	slab("SideWallB", Vector3.new(90, 18, 4), CFrame.new(baseX, 33, 61), COL_DARK, Enum.Material.Metal, base, true)
+	slab("Roof", Vector3.new(60, 2, 82), CFrame.new(baseX - facing * 10, 48, 0), COL_METAL, Enum.Material.Metal, base, true)
 	local generatorRoom = slab(
 		"GeneratorRoom",
 		Vector3.new(22, 12, 28),
@@ -354,7 +505,7 @@ for _, setup in baseSetups do
 	turret:SetAttribute("Team", setup.teamName)
 	CollectionService:AddTag(turret, "BaseTurret")
 
-	for _, railZ in { -38, 38 } do
+	for _, railZ in { -51, 51 } do
 		local rail = slab(
 			"EnergyRail",
 			Vector3.new(42, 0.55, 0.55),
@@ -370,7 +521,7 @@ for _, setup in baseSetups do
 	local identityPanel = slab(
 		"TeamIdentityPanel",
 		Vector3.new(0.5, 9, 34),
-		CFrame.new(baseX - facing * 30.7, 37, 0),
+		CFrame.new(baseX - facing * 40.7, 39, 0),
 		setup.col,
 		Enum.Material.Neon,
 		base,
@@ -394,9 +545,60 @@ for _, setup in baseSetups do
 	identityText.TextStrokeTransparency = 0.35
 	identityText.Parent = identity
 
+	-- Hoher Energie-Beacon: macht die Basis auch bei maximalem Ski-Tempo
+	-- aus dem Hochland und dem gegnerischen Hinterland sofort lesbar.
+	local beaconX = baseX - facing * 41
+	local baseBeacon = slab(
+		"BaseEnergyBeacon",
+		Vector3.new(2.4, 118, 2.4),
+		CFrame.new(beaconX, 105, 0),
+		setup.col,
+		Enum.Material.Neon,
+		base,
+		false
+	)
+	baseBeacon.Transparency = 0.42
+	baseBeacon.CanQuery = false
+	baseBeacon.CastShadow = false
+
+	for ringIndex = 1, 3 do
+		local ring = slab(
+			"BeaconPulseRing" .. ringIndex,
+			Vector3.new(1.2, 10 + ringIndex * 5, 10 + ringIndex * 5),
+			CFrame.new(beaconX, 58 + ringIndex * 28, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			setup.col,
+			Enum.Material.Neon,
+			base,
+			false
+		)
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Transparency = 0.3 + ringIndex * 0.1
+		ring.CanQuery = false
+		ring.CastShadow = false
+	end
+
+	local beaconCrown = slab(
+		"BeaconCrown",
+		Vector3.new(8, 8, 8),
+		CFrame.new(beaconX, 166, 0),
+		setup.col,
+		Enum.Material.Neon,
+		base,
+		false
+	)
+	beaconCrown.Shape = Enum.PartType.Ball
+	beaconCrown.CanQuery = false
+	beaconCrown.CastShadow = false
+	local beaconLight = Instance.new("PointLight")
+	beaconLight.Color = setup.col
+	beaconLight.Brightness = 3.5
+	beaconLight.Range = 70
+	beaconLight.Shadows = false
+	beaconLight.Parent = beaconCrown
+
 	-- Flaggen-Stand: vorne am Plattformrand zur Mitte, direkt über dem Kopf der
 	-- Grab-Rampe -> schneller Capper fährt sie hoch und grabbt im Vorbeiflug
-	local flagX = baseX + facing * 28
+	local flagX = baseX + facing * 38
 	local flagStand =
 		slab("FlagStand", Vector3.new(5, 1.5, 5), CFrame.new(flagX, 24.75, 0), Color3.fromRGB(240, 240, 240), Enum.Material.Neon, base, true)
 	flagStand:SetAttribute("Team", setup.teamName)
@@ -406,23 +608,26 @@ for _, setup in baseSetups do
 	local spawnLocation = Instance.new("SpawnLocation")
 	spawnLocation.Name = setup.teamName .. "SpawnLocation"
 	spawnLocation.Size = Vector3.new(16, 1, 16)
-	spawnLocation.CFrame = CFrame.new(baseX - facing * 6, 24.5, -26)
+	spawnLocation.CFrame = CFrame.new(baseX - facing * 8, 24.5, -38)
 	spawnLocation.Anchored = true
 	spawnLocation.Neutral = false
 	spawnLocation.TeamColor = setup.brick
+	spawnLocation.Duration = 0
 	spawnLocation.Transparency = 0.5
 	spawnLocation.Color = setup.col
 	spawnLocation.Material = Enum.Material.Metal
 	spawnLocation.Parent = base
 
 	for i = 1, 4 do
-		local sx = baseX - facing * 6 + (i - 2.5) * 9
+		local sx = baseX - facing * 8 + (i - 2.5) * 10
 		local spawnTag = Instance.new("Part")
 		spawnTag.Name = setup.teamName .. "PlayerSpawn" .. i
 		spawnTag.Size = Vector3.new(4, 1, 4)
-		spawnTag.CFrame = CFrame.new(sx, 24.5, -26)
+		spawnTag.CFrame = CFrame.new(sx, 24.5, -38)
 		spawnTag.Anchored = true
 		spawnTag.CanCollide = false
+		spawnTag.CanTouch = false
+		spawnTag.CanQuery = false
 		spawnTag.Transparency = 1
 		spawnTag:SetAttribute("Team", setup.teamName)
 		spawnTag.Parent = base
@@ -436,8 +641,8 @@ end
 -- ============================================================
 local snowVolume = slab(
 	"SnowVolume",
-	Vector3.new(760, 1, 500),
-	CFrame.new(0, 112, 0),
+	Vector3.new(1450, 1, 950),
+	CFrame.new(0, 140, 0),
 	Color3.new(1, 1, 1),
 	Enum.Material.SmoothPlastic,
 	map,
@@ -450,7 +655,7 @@ snowVolume.CastShadow = false
 local snow = Instance.new("ParticleEmitter")
 snow.Name = "AlpineSnow"
 snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-snow.Rate = 55
+snow.Rate = 90
 snow.Lifetime = NumberRange.new(7, 10)
 snow.Speed = NumberRange.new(1, 3)
 snow.Acceleration = Vector3.new(2, -4.5, 0)
@@ -473,6 +678,81 @@ snow.Transparency = NumberSequence.new({
 snow.Parent = snowVolume
 
 print(
-	"[MapBuilder] TribesMapLive XL gebaut - Hauptbahn + 2 Seiten-Routen (N/S) + Hinterland, "
-		.. "6 Kicker, Grab-Routen, Gravity=0"
+	"[MapBuilder] TribesMapLive TITAN gebaut - 1.500x1.000, Core, Flanken, Hochland und Hinterland, "
+		.. "8 Kicker, 10 Querwechsel, Grab-Routen, Gravity=0"
 )
+
+-- ============================================================
+-- 7. SPIELBARE KARTENGRENZE
+-- Keine unsichtbare Wand: Wer die Arena verlaesst, hat sechs Sekunden, um
+-- mit Jetpack/Ski zurueckzukehren. Der Zustand repliziert als Player-Attribut
+-- und wird vom HUD als deutlicher Countdown dargestellt.
+-- ============================================================
+local ARENA_MAX_X = 770
+local ARENA_MAX_Z = 520
+local ARENA_MIN_Y = -145
+local ARENA_RETURN_TIME = 6
+local BOUNDARY_UPDATE_INTERVAL = 0.2
+local arenaOutsideTime: { [Player]: number } = {}
+local boundaryAccumulator = 0
+
+local function clearBoundaryWarning(player: Player)
+	arenaOutsideTime[player] = nil
+	if player:GetAttribute("OutOfBounds") ~= false then
+		player:SetAttribute("OutOfBounds", false)
+		player:SetAttribute("OutOfBoundsTime", ARENA_RETURN_TIME)
+	end
+end
+
+local function isOutsideArena(position: Vector3): boolean
+	return math.abs(position.X) > ARENA_MAX_X
+		or math.abs(position.Z) > ARENA_MAX_Z
+		or position.Y < ARENA_MIN_Y
+end
+
+local function setupBoundaryPlayer(player: Player)
+	player:SetAttribute("OutOfBounds", false)
+	player:SetAttribute("OutOfBoundsTime", ARENA_RETURN_TIME)
+end
+
+Players.PlayerAdded:Connect(setupBoundaryPlayer)
+Players.PlayerRemoving:Connect(function(player)
+	arenaOutsideTime[player] = nil
+end)
+for _, player in Players:GetPlayers() do
+	setupBoundaryPlayer(player)
+end
+
+RunService.Heartbeat:Connect(function(dt)
+	boundaryAccumulator += dt
+	if boundaryAccumulator < BOUNDARY_UPDATE_INTERVAL then
+		return
+	end
+	local step = boundaryAccumulator
+	boundaryAccumulator = 0
+
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") then
+			clearBoundaryWarning(player)
+			continue
+		end
+
+		if isOutsideArena(root.Position) then
+			local elapsed = (arenaOutsideTime[player] or 0) + step
+			arenaOutsideTime[player] = elapsed
+			player:SetAttribute("OutOfBounds", true)
+			player:SetAttribute("OutOfBoundsTime", math.max(0, ARENA_RETURN_TIME - elapsed))
+			if elapsed >= ARENA_RETURN_TIME then
+				humanoid.Health = 0
+				clearBoundaryWarning(player)
+			end
+		else
+			clearBoundaryWarning(player)
+		end
+	end
+end)
+
+print("[MapBuilder] Titan combat boundary active")

@@ -42,11 +42,21 @@ local function grantSpawnProtection(character: Model)
 
 	local forceField = Instance.new("ForceField")
 	forceField.Name = "SpawnProtection"
-	forceField.Visible = false
+	forceField.Visible = true
 	forceField.Parent = character
+	local protectedPlayer = Players:GetPlayerFromCharacter(character)
+	if protectedPlayer then
+		protectedPlayer:SetAttribute(
+			"SpawnProtectedUntil",
+			workspace:GetServerTimeNow() + Constants.SPAWN_PROTECTION_DURATION
+		)
+	end
 	task.delay(Constants.SPAWN_PROTECTION_DURATION, function()
 		if forceField.Parent then
 			forceField:Destroy()
+			if protectedPlayer and protectedPlayer.Parent == Players then
+				protectedPlayer:SetAttribute("SpawnProtectedUntil", 0)
+			end
 		end
 	end)
 end

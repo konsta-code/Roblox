@@ -29,8 +29,18 @@ local stations: { [BasePart]: Team } = {}
 local turrets: { [BasePart]: Team } = {}
 local lastTurretFire: { [BasePart]: number } = {}
 local lastStationUse: { [Player]: number } = {}
+local lastBaseAttackAlert: { [Team]: number } = {}
 local initialized = false
 local turretAccumulator = 0
+local baseEventSerial = 0
+
+local function publishBaseEvent(kind: string, state: GeneratorState, actor: Player?)
+	ReplicatedStorage:SetAttribute("BaseEventKind", kind)
+	ReplicatedStorage:SetAttribute("BaseEventTeam", state.team.Name)
+	ReplicatedStorage:SetAttribute("BaseEventPlayer", actor and actor.Name or "")
+	baseEventSerial += 1
+	ReplicatedStorage:SetAttribute("BaseEventSerial", baseEventSerial)
+end
 
 local function getTeam(instance: Instance): Team?
 	local teamName = instance:GetAttribute("Team")
@@ -67,11 +77,37 @@ end
 
 local function publishGenerator(state: GeneratorState)
 	local powered = state.health > 0
+	local ratio = math.clamp(state.health / Constants.GENERATOR_MAX_HEALTH, 0, 1)
 	state.part:SetAttribute("Health", state.health)
 	state.part:SetAttribute("MaxHealth", Constants.GENERATOR_MAX_HEALTH)
 	state.part:SetAttribute("Powered", powered)
+	state.part:SetAttribute(
+		"DamageStage",
+		if not powered then "Offline" elseif ratio <= 0.25 then "Critical" elseif ratio <= 0.6 then "Damaged" else "Online"
+	)
 	state.part.Material = powered and Enum.Material.Neon or Enum.Material.CrackedLava
-	state.part.Color = powered and state.team.TeamColor.Color or Color3.fromRGB(45, 45, 48)
+	state.part.Color = if not powered
+		then Color3.fromRGB(45, 45, 48)
+		elseif ratio <= 0.25
+		then Color3.fromRGB(255, 106, 45)
+		else state.team.TeamColor.Color
+
+	local light = state.part:FindFirstChildOfClass("PointLight")
+	if light then
+		light.Brightness = if powered then 0.8 + ratio * 2.2 else 0
+		light.Range = if powered then 14 + ratio * 18 else 0
+	end
+	local smoke = state.part:FindFirstChild("DamageSmoke")
+	if not smoke then
+		smoke = Instance.new("Smoke")
+		smoke.Name = "DamageSmoke"
+		smoke.Color = Color3.fromRGB(70, 74, 82)
+		smoke.Opacity = 0.34
+		smoke.RiseVelocity = 5
+		smoke.Size = 7
+		smoke.Parent = state.part
+	end
+	(smoke :: Smoke).Enabled = ratio <= 0.6
 	state.prompt.ActionText = powered and "Generator reparieren" or "Generator neu starten"
 	ReplicatedStorage:SetAttribute("GeneratorHealth_" .. state.team.Name, state.health)
 	ReplicatedStorage:SetAttribute("GeneratorMaxHealth_" .. state.team.Name, Constants.GENERATOR_MAX_HEALTH)
@@ -93,8 +129,16 @@ local function damageGenerator(attacker: Player, state: GeneratorState, amount: 
 	if attacker.Team == state.team or state.health <= 0 or amount <= 0 then
 		return false
 	end
+	local previousHealth = state.health
 	state.health = math.max(0, state.health - math.clamp(amount, 0, 500))
 	publishGenerator(state)
+	if previousHealth > 0 and state.health <= 0 then
+		CombatService.AddObjective(attacker, 250, "GENERATOR DESTROYED")
+		publishBaseEvent("Destroyed", state, attacker)
+	elseif os.clock() - (lastBaseAttackAlert[state.team] or -math.huge) >= 6 then
+		lastBaseAttackAlert[state.team] = os.clock()
+		publishBaseEvent("UnderAttack", state, attacker)
+	end
 	return true
 end
 
@@ -172,8 +216,18 @@ local function registerGenerator(instance: Instance)
 		then
 			return
 		end
+		local previousHealth = state.health
 		state.health = math.min(Constants.GENERATOR_MAX_HEALTH, state.health + Constants.GENERATOR_REPAIR_AMOUNT)
 		publishGenerator(state)
+		local repaired = state.health - previousHealth
+		if repaired > 0 then
+			CombatService.AddObjective(player, math.max(10, math.floor(repaired / 4)), "GENERATOR REPAIR")
+			if previousHealth <= 0 then
+				publishBaseEvent("Restored", state, player)
+			elseif state.health >= Constants.GENERATOR_MAX_HEALTH then
+				publishBaseEvent("Repaired", state, player)
+			end
+		end
 	end)
 end
 
@@ -349,6 +403,7 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 local function resetGenerators()
+	table.clear(lastBaseAttackAlert)
 	for _, state in generators do
 		state.health = Constants.GENERATOR_MAX_HEALTH
 		publishGenerator(state)

@@ -14,8 +14,8 @@ Lighting.ExposureCompensation = 0.08
 Lighting.GlobalShadows = true
 Lighting.ShadowSoftness = 0.28
 Lighting.FogColor = Color3.fromRGB(151, 174, 197)
-Lighting.FogStart = 470
-Lighting.FogEnd = 1250
+Lighting.FogStart = 650
+Lighting.FogEnd = 1850
 
 for _, name in { "TribesAtmosphere", "TribesBloom", "TribesGrade", "TribesSunRays" } do
 	local previous = Lighting:FindFirstChild(name)

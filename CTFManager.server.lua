@@ -43,22 +43,92 @@ type Flag = {
 
 local flags: { Flag } = {}
 local scores: { [Team]: number } = {}
+local flagEventSerial = 0
+
+local function isLiveCapturePhase(): boolean
+	local currentPhase = MatchSignals.GetPhase()
+	return currentPhase == "InProgress" or currentPhase == "Overtime"
+end
+
+local function publishFlagEvent(kind: string, flag: Flag, actor: Player?)
+	ReplicatedStorage:SetAttribute("FlagEventKind", kind)
+	ReplicatedStorage:SetAttribute("FlagEventTeam", flag.team.Name)
+	ReplicatedStorage:SetAttribute("FlagEventPlayer", actor and actor.Name or "")
+	flagEventSerial += 1
+	ReplicatedStorage:SetAttribute("FlagEventSerial", flagEventSerial)
+end
+
+local function replicateFlagState(flag: Flag)
+	flag.part:SetAttribute("FlagState", flag.state)
+	flag.part:SetAttribute("CarrierName", flag.carrier and flag.carrier.Name or "")
+	flag.part:SetAttribute("ReturnTime", flag.returnTimer and math.max(0, math.ceil(flag.returnTimer)) or 0)
+end
 
 -- === Visuals & Physik-State ===
 
 local function createFlagVisual(homeCFrame: CFrame, team: Team): BasePart
 	local part = Instance.new("Part")
 	part.Name = team.Name .. "Flag"
-	part.Size = Vector3.new(2, 3, 2)
+	part.Size = Vector3.new(2.2, 2.2, 2.2)
 	part.CFrame = homeCFrame
 	part.Anchored = true
 	part.CanCollide = false
+	part.CanTouch = true
+	part.Shape = Enum.PartType.Ball
 	part.Color = team.TeamColor.Color
 	part.Material = Enum.Material.Neon
 	-- Tag für Client-Systeme (FlagMarkers): Flaggen auffindbar machen, ohne
 	-- Namens-Konventionen raten zu müssen. Überlebt Reparenting beim Tragen.
 	CollectionService:AddTag(part, "CTFFlag")
 	part.Parent = workspace
+
+	local function visualPart(name: string, size: Vector3, offset: CFrame, material: Enum.Material): BasePart
+		local visual = Instance.new("Part")
+		visual.Name = name
+		visual.Size = size
+		visual.CFrame = homeCFrame * offset
+		visual.Anchored = false
+		visual.CanCollide = false
+		visual.CanTouch = false
+		visual.CanQuery = false
+		visual.Massless = true
+		visual.Color = team.TeamColor.Color
+		visual.Material = material
+		visual.Parent = part
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = part
+		weld.Part1 = visual
+		weld.Parent = visual
+		return visual
+	end
+
+	visualPart("FlagPole", Vector3.new(0.34, 7.5, 0.34), CFrame.new(0, 3.6, 0), Enum.Material.Metal)
+	local banner = visualPart("FlagBanner", Vector3.new(4.8, 2.7, 0.32), CFrame.new(2.35, 5.55, 0), Enum.Material.Fabric)
+	local stripe = visualPart("FlagStripe", Vector3.new(4.9, 0.32, 0.37), CFrame.new(2.35, 5.55, 0), Enum.Material.Neon)
+	stripe.Color = team.TeamColor.Color:Lerp(Color3.new(1, 1, 1), 0.4)
+
+	local glow = Instance.new("PointLight")
+	glow.Color = team.TeamColor.Color
+	glow.Brightness = 1.8
+	glow.Range = 18
+	glow.Shadows = false
+	glow.Parent = part
+
+	local particles = Instance.new("ParticleEmitter")
+	particles.Name = "FlagEnergy"
+	particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	particles.Rate = 9
+	particles.Lifetime = NumberRange.new(0.45, 0.8)
+	particles.Speed = NumberRange.new(0.4, 1.2)
+	particles.SpreadAngle = Vector2.new(180, 180)
+	particles.Color = ColorSequence.new(team.TeamColor.Color)
+	particles.LightEmission = 0.85
+	particles.Size = NumberSequence.new(0.16, 0)
+	particles.Parent = part
+
+	part:SetAttribute("FlagState", "AtBase")
+	part:SetAttribute("CarrierName", "")
+	part:SetAttribute("ReturnTime", 0)
 	return part
 end
 
@@ -70,7 +140,7 @@ local function detachFlagPhysics(flag: Flag)
 	flag.part.Anchored = true
 end
 
-local function returnFlagToBase(flag: Flag)
+local function returnFlagToBase(flag: Flag, announceReturn: boolean?, actor: Player?)
 	local previousCarrier = flag.carrier
 
 	detachFlagPhysics(flag)
@@ -79,9 +149,16 @@ local function returnFlagToBase(flag: Flag)
 	flag.returnTimer = nil
 	flag.part.CFrame = flag.homeCFrame
 	flag.part.Parent = workspace
+	replicateFlagState(flag)
 
 	if previousCarrier and previousCarrier.Parent == Players then
 		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
+	end
+	if announceReturn then
+		if actor then
+			CombatService.AddObjective(actor, 50, "FLAG RETURN")
+		end
+		publishFlagEvent("Returned", flag, actor)
 	end
 end
 
@@ -94,10 +171,12 @@ local function dropFlag(flag: Flag, atPosition: Vector3)
 	flag.returnTimer = Constants.RETURN_TIMER
 	flag.part.CFrame = CFrame.new(atPosition)
 	flag.part.Parent = workspace
+	replicateFlagState(flag)
 
 	if previousCarrier and previousCarrier.Parent == Players then
 		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
 	end
+	publishFlagEvent("Dropped", flag, previousCarrier)
 end
 
 local function attachFlagToCarrier(flag: Flag, player: Player)
@@ -105,6 +184,7 @@ local function attachFlagToCarrier(flag: Flag, player: Player)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
 
+	local wasAtBase = flag.state == "AtBase"
 	flag.state = "Carried"
 	flag.carrier = player
 	flag.returnTimer = nil
@@ -117,10 +197,13 @@ local function attachFlagToCarrier(flag: Flag, player: Player)
 	weld.Name = "FlagWeld"
 	weld.Part0 = root
 	weld.Part1 = flag.part
-	weld.C0 = CFrame.new(0, 3, 0) -- über dem Kopf, gut sichtbar für beide Teams
+	weld.C0 = CFrame.new(0, 1.5, 0) -- Banner ueber der Schulter, ohne die Sicht zu verdecken
 	weld.Parent = flag.part
 
 	carryStatusEvent:FireClient(player, true, flag.team.Name)
+	replicateFlagState(flag)
+	publishFlagEvent("Taken", flag, player)
+	CombatService.AddObjective(player, if wasAtBase then 25 else 10, if wasAtBase then "FLAG GRAB" else "FLAG RECOVERY")
 end
 
 -- === Game-Logik ===
@@ -159,7 +242,7 @@ local function onCapture(flag: Flag, scoringPlayer: Player)
 end
 
 local function checkCaptureCondition(carrierFlag: Flag, player: Player)
-	if MatchSignals.GetPhase() ~= "InProgress" then return end
+	if not isLiveCapturePhase() then return end
 	local team = player.Team :: Team?
 	if not team then return end
 
@@ -177,14 +260,14 @@ local function checkCaptureCondition(carrierFlag: Flag, player: Player)
 end
 
 local function tryPickup(flag: Flag, player: Player)
-	if MatchSignals.GetPhase() ~= "InProgress" then return end
+	if not isLiveCapturePhase() then return end
 	local team = player.Team :: Team?
 	if not team then return end
 
 	if team == flag.team then
 		-- Eigenes Team berührt eigene (gedroppte) Flagge -> sofortige Rückkehr
 		if flag.state == "Dropped" then
-			returnFlagToBase(flag)
+			returnFlagToBase(flag, true, player)
 		end
 		return
 	end
@@ -226,8 +309,12 @@ RunService.Heartbeat:Connect(function(dt)
 			checkCaptureCondition(flag, flag.carrier)
 		elseif flag.state == "Dropped" and flag.returnTimer then
 			flag.returnTimer -= dt
+			local returnSecond = math.max(0, math.ceil(flag.returnTimer))
+			if flag.part:GetAttribute("ReturnTime") ~= returnSecond then
+				flag.part:SetAttribute("ReturnTime", returnSecond)
+			end
 			if flag.returnTimer <= 0 then
-				returnFlagToBase(flag)
+				returnFlagToBase(flag, true)
 			end
 		end
 	end
@@ -250,7 +337,7 @@ CTFSignals.FlagFumbleRequested:Connect(function(player: Player)
 end)
 
 MatchSignals.PhaseChanged:Connect(function(newPhase: MatchSignals.MatchPhase)
-	if newPhase ~= "InProgress" then resetAllFlags() end
+	if newPhase ~= "InProgress" and newPhase ~= "Overtime" then resetAllFlags() end
 end)
 
 -- === Setup ===
@@ -323,7 +410,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	for _, flag in flags do
 		if flag.state == "Carried" and flag.carrier == player then
-			returnFlagToBase(flag)
+			returnFlagToBase(flag, true)
 		end
 	end
 end)

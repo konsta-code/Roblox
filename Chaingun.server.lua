@@ -108,6 +108,7 @@ local function tryFire(player: Player, direction: any)
 			return -- schneller als der aktuelle Spin-up-Zustand erlaubt
 		end
 	end
+	CombatService.BreakSpawnProtection(player)
 	lastFireTime[player] = now
 
 	local newHeat = getCurrentHeat(player, now, profile) + profile.heatPerShot

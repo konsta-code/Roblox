@@ -17,10 +17,11 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local STAT_NAMES = { "Kills", "Deaths", "Captures" }
+local STAT_NAMES = { "Kills", "Deaths", "Captures", "Assists", "Score" }
 local STORE_NAME = "CareerStats_v1"
 local AUTOSAVE_INTERVAL = 120
 local MAX_RETRIES = 4
+local PERSISTENCE_ENABLED = not RunService:IsStudio()
 
 local store = DataStoreService:GetDataStore(STORE_NAME)
 local loaded: { [Player]: boolean } = {}
@@ -68,6 +69,12 @@ local function retry(fn: () -> any): (boolean, any)
 end
 
 local function loadPlayer(player: Player)
+	if not PERSISTENCE_ENABLED then
+		for _, name in STAT_NAMES do
+			ensureStat(player, name)
+		end
+		return
+	end
 	local ok, data = retry(function()
 		return store:GetAsync(keyFor(player))
 	end)
@@ -100,6 +107,9 @@ local function loadPlayer(player: Player)
 end
 
 local function savePlayer(player: Player)
+	if not PERSISTENCE_ENABLED then
+		return
+	end
 	if not loaded[player] then
 		return -- nie erfolgreich geladen -> nicht speichern (Karriere nicht mit 0 überschreiben)
 	end
@@ -132,14 +142,16 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- Periodisches Autosave (Absicherung gegen Crashes)
-task.spawn(function()
-	while true do
-		task.wait(AUTOSAVE_INTERVAL)
-		for _, player in Players:GetPlayers() do
-			savePlayer(player)
+if PERSISTENCE_ENABLED then
+	task.spawn(function()
+		while true do
+			task.wait(AUTOSAVE_INTERVAL)
+			for _, player in Players:GetPlayers() do
+				savePlayer(player)
+			end
 		end
-	end
-end)
+	end)
+end
 
 -- Beim Server-Shutdown alle noch verbliebenen Spieler speichern
 game:BindToClose(function()
@@ -152,4 +164,6 @@ game:BindToClose(function()
 	task.wait(2)
 end)
 
-print("[PlayerData] Karriere-Persistenz aktiv (Kills/Deaths/Captures)")
+print(if PERSISTENCE_ENABLED
+	then "[PlayerData] Karriere-Persistenz aktiv (Kills/Deaths/Captures/Assists/Score)"
+	else "[PlayerData] Studio-Test: Persistenz bewusst deaktiviert")
