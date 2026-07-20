@@ -55,6 +55,9 @@ local function createFlagVisual(homeCFrame: CFrame, team: Team): BasePart
 	part.CanCollide = false
 	part.Color = team.TeamColor.Color
 	part.Material = Enum.Material.Neon
+	-- Tag für Client-Systeme (FlagMarkers): Flaggen auffindbar machen, ohne
+	-- Namens-Konventionen raten zu müssen. Überlebt Reparenting beim Tragen.
+	CollectionService:AddTag(part, "CTFFlag")
 	part.Parent = workspace
 	return part
 end

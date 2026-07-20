@@ -70,6 +70,8 @@
       "StarterPlayerScripts": {
         "SkiController": { "$path": "SkiController.client.lua" },
         "HudController": { "$path": "HudController.client.lua" },
+        "Scoreboard": { "$path": "Scoreboard.client.lua" },
+        "FlagMarkers": { "$path": "FlagMarkers.client.lua" },
         "BaseStatus": { "$path": "BaseStatus.client.lua" },
         "LoadoutMenu": { "$path": "LoadoutMenu.client.lua" },
         "WeaponSelector": { "$path": "WeaponSelector.client.lua" },
