@@ -90,7 +90,7 @@ end
 -- ============================================================
 -- 1. BODEN (Fangfläche, verhindert Endlos-Fall am Start)
 -- ============================================================
-slab("Ground", Vector3.new(820, 60, 320), CFrame.new(0, -30, 0), COL_ROCK, Enum.Material.Rock, map, true)
+slab("Ground", Vector3.new(900, 60, 560), CFrame.new(0, -30, 0), COL_ROCK, Enum.Material.Rock, map, true)
 
 -- ============================================================
 -- 2. HAUPT-TERRAIN (durchgehende Ski-Fläche, Breite 240)
@@ -120,6 +120,48 @@ skiRamp("LeftKicker", -135, 1.5, -120, 10, 70, 0, COL_SNOW, Enum.Material.Glacie
 skiRamp("RightKicker", 135, 1.5, 120, 10, 70, 0, COL_SNOW, Enum.Material.Glacier, kickers, 14)
 
 -- ============================================================
+-- 3b. SEITEN-ROUTEN (Nord z=-190 / Süd z=+190, Breite 140)
+-- Zweite Ski-Linie pro Seite mit eigenem Rhythmus: welliger als die
+-- Hauptbahn (Basis -> Welle -> tiefe Senke -> Welle -> Basis), dockt bei
+-- z=±120 nahtlos an die Kante der Hauptbahn an (kein Spalt). Einstieg an
+-- beiden Enden auf Basis-Höhe 24 - vom Basis-Plateau seitlich reindriften.
+-- Flanken-Routen sind schwerer zu verteidigen -> klassische Capper-Wahl.
+-- ============================================================
+local sideRoutes = Instance.new("Folder")
+sideRoutes.Name = "SideRoutes"
+sideRoutes.Parent = map
+
+for _, zc in { -190, 190 } do
+	local suffix = if zc < 0 then "N" else "S"
+	local SW = 140
+	skiRamp("Side1_" .. suffix, -230, 24, -160, 4, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
+	skiRamp("Side2_" .. suffix, -160, 4, -90, 14, SW, zc, COL_SNOW, Enum.Material.Snow, sideRoutes)
+	skiRamp("Side3_" .. suffix, -90, 14, 0, 2, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
+	skiRamp("Side4_" .. suffix, 0, 2, 90, 14, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
+	skiRamp("Side5_" .. suffix, 90, 14, 160, 4, SW, zc, COL_SNOW, Enum.Material.Snow, sideRoutes)
+	skiRamp("Side6_" .. suffix, 160, 4, 230, 24, SW, zc, COL_ICE, Enum.Material.Ice, sideRoutes)
+
+	-- Kicker in der Senken-Mitte, je einer pro Fahrtrichtung (schmal genug,
+	-- um mittig dran vorbeizufahren)
+	skiRamp("SideKickerA_" .. suffix, -8, 2.2, -26, 12, 56, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
+	skiRamp("SideKickerB_" .. suffix, 8, 2.2, 26, 12, 56, zc, COL_SNOW, Enum.Material.Glacier, sideRoutes, 12)
+end
+
+-- ============================================================
+-- 3c. HINTERLAND (hinter beiden Basen)
+-- Volle Breite ansteigende Schüssel hinter jeder Basis: Verteidiger skien
+-- aus dem Hinterland zurück zur Front, Capper nutzen sie als Flucht-Bogen
+-- über die Basis hinweg. Zwischen Basis-Rückwand und Anstieg liegt ein
+-- flacher Hof (y=0) als Landezone.
+-- ============================================================
+local backfield = Instance.new("Folder")
+backfield.Name = "Backfield"
+backfield.Parent = map
+
+skiRamp("RedBackfield", -390, 30, -300, 0, 520, 0, COL_SNOW, Enum.Material.Snow, backfield)
+skiRamp("BlueBackfield", 300, 0, 390, 30, 520, 0, COL_SNOW, Enum.Material.Snow, backfield)
+
+-- ============================================================
 -- 4. CANYON-SILHOUETTE UND ROUTENLICHTER
 -- Die Felsen stehen ausserhalb der Ski-Flaeche. Die kleineren Leuchten sind
 -- nicht kollidierbar, damit sie bei hoher Geschwindigkeit keine Route stoppen.
@@ -128,16 +170,17 @@ local scenery = Instance.new("Folder")
 scenery.Name = "CanyonScenery"
 scenery.Parent = map
 
+-- z=±272: hinter den Seiten-Routen (enden bei ±260), vor dem Weltrand (±280)
 local spires = {
-	{ -215, -146, 38, -12 },
-	{ -174, 145, 54, 9 },
-	{ -126, -147, 42, 15 },
-	{ -72, 146, 62, -7 },
-	{ -18, -145, 48, 11 },
-	{ 38, 146, 58, -13 },
-	{ 91, -146, 46, 7 },
-	{ 146, 145, 66, -10 },
-	{ 204, -147, 51, 12 },
+	{ -215, -272, 38, -12 },
+	{ -174, 271, 54, 9 },
+	{ -126, -273, 42, 15 },
+	{ -72, 272, 62, -7 },
+	{ -18, -271, 48, 11 },
+	{ 38, 272, 58, -13 },
+	{ 91, -272, 46, 7 },
+	{ 146, 271, 66, -10 },
+	{ 204, -273, 51, 12 },
 }
 
 for index, definition in spires do
@@ -169,7 +212,7 @@ routeLights.Name = "RouteLights"
 routeLights.Parent = scenery
 
 for x = -200, 200, 40 do
-	for _, z in { -112, 112 } do
+	for _, z in { -112, 112, -252, 252 } do
 		local teamColor = if x < 0 then COL_RED elseif x > 0 then COL_BLUE else Color3.fromRGB(105, 232, 255)
 		local post = slab(
 			string.format("RouteLight_%d_%d", x, z),
@@ -393,7 +436,7 @@ end
 -- ============================================================
 local snowVolume = slab(
 	"SnowVolume",
-	Vector3.new(650, 1, 250),
+	Vector3.new(760, 1, 500),
 	CFrame.new(0, 112, 0),
 	Color3.new(1, 1, 1),
 	Enum.Material.SmoothPlastic,
@@ -429,4 +472,7 @@ snow.Transparency = NumberSequence.new({
 })
 snow.Parent = snowVolume
 
-print("[MapBuilder] TribesMapLive gebaut - Gravity=0, durchgehende Ski-Fläche, 2 Sprungschanzen, Grab-Routen")
+print(
+	"[MapBuilder] TribesMapLive XL gebaut - Hauptbahn + 2 Seiten-Routen (N/S) + Hinterland, "
+		.. "6 Kicker, Grab-Routen, Gravity=0"
+)
