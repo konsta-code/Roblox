@@ -1,30 +1,56 @@
 -- MovementConstants.lua
--- Movement v4 - kritische Fixes
+-- Clean-room Roblox adaptation of values exposed by the old Tribes: Ascend
+-- UnrealScript defaults. The original game used Unreal Units (UU); this
+-- project consistently maps 20 UU to one Roblox stud.
 
 local Constants = {}
 
-Constants.WALK_SPEED = 16
-Constants.MAX_SKI_SPEED = 240
-Constants.GRAVITY = 105
-Constants.JUMP_POWER = 0
+Constants.BUILD_ID = "tribes-core-1"
+Constants.UU_PER_STUD = 20
 
-Constants.SKI_GROUND_FRICTION = 0.003
-Constants.WALK_GROUND_FRICTION = 14.0
-Constants.SKI_MIN_SLOPE_ANGLE = 0
-Constants.SKI_SLOPE_FORCE_MULT = 1.8
-
-Constants.JETPACK_MAX_ENERGY = 100
-Constants.JETPACK_DRAIN_RATE = 35
-Constants.JETPACK_REGEN_RATE = 23
-Constants.JETPACK_REGEN_DELAY = 0.3
-Constants.JETPACK_THRUST_FORCE = 160
-Constants.JETPACK_FORWARD_MULT = 0.65
-
-Constants.JET_SOFT_CAP_SPEED = 85
-Constants.JET_OVER_CAP_MULT = 0.18
-
+-- Base movement (TrFamilyInfo: GroundSpeed 440, JumpZ 322).
+Constants.WALK_SPEED = 440 / Constants.UU_PER_STUD
+Constants.JUMP_SPEED = 322 / Constants.UU_PER_STUD
+Constants.GRAVITY = 520 / Constants.UU_PER_STUD
+Constants.WALK_RESPONSE = 12
 Constants.GROUND_CHECK_DISTANCE = 4.2
-Constants.LANDING_VELOCITY_TRANSFER = 0.95
-Constants.EXTERNAL_IMPULSE_BLEND = 0.85
+Constants.MAX_WALKABLE_NORMAL_Y = 0.55
+
+-- Skiing (TrFamilyInfo / TrPawn defaults).
+Constants.SKI_FRICTION = 0.003
+Constants.SKI_SLOPE_GRAVITY_BOOST = 2
+Constants.SKI_LANDING_TRANSFER = 1
+Constants.SKI_MAX_SPEED = 2500 / Constants.UU_PER_STUD
+Constants.SKI_TERMINAL_SPEED = 3000 / Constants.UU_PER_STUD
+Constants.SKI_PEAK_CONTROL_SPEED = 1600 / Constants.UU_PER_STUD
+Constants.SKI_CONTROL_SIGMA_SQUARED = 100000 / (Constants.UU_PER_STUD ^ 2)
+Constants.SKI_MAX_CONTROL_PCT = 0.65
+Constants.SKI_STEER_RESPONSE = 4
+Constants.SKI_ACCEL_CAP_SPEED = 1700 / Constants.UU_PER_STUD
+Constants.SKI_ACCEL_PCT = 0.4
+
+-- Air control (AirSpeed 550 * AirControl 0.2).
+Constants.AIR_CONTROL_ACCELERATION = (550 * 0.2) / Constants.UU_PER_STUD
+
+-- Jetpack / power pool defaults.
+Constants.JETPACK_MAX_ENERGY = 100
+Constants.JETPACK_DRAIN_RATE = 30
+Constants.JETPACK_REGEN_RATE = 13
+Constants.JETPACK_INITIAL_COST = 1
+Constants.JETPACK_RESTART_ENERGY = 10
+Constants.JETPACK_FORWARD_PCT = 0.4
+Constants.JETPACK_INIT_DURATION = 2.4
+Constants.JETPACK_INIT_BOOST_ACCELERATION = 12
+Constants.JETPACK_MAX_BOOST_GROUND_SPEED = 1600 / Constants.UU_PER_STUD
+Constants.JETPACK_THRUST_SPEED = 1000 / Constants.UU_PER_STUD
+Constants.JETPACK_ACCEL_AT_THRUST_SPEED = 16 / Constants.UU_PER_STUD
+Constants.JETPACK_LIFT_ACCELERATION = 150 / Constants.UU_PER_STUD
+Constants.JETPACK_RAMP_UP_TIME = 0.3
+Constants.JETPACK_RAMP_DOWN_TIME = 0.15
+Constants.JETPACK_TERMINAL_SPEED = 3000 / Constants.UU_PER_STUD
+
+-- Server sanity limits leave room for a full-strength disc jump.
+Constants.SERVER_MAX_LINEAR_SPEED = 225
+Constants.MAX_EXTERNAL_IMPULSE = 140
 
 return Constants
