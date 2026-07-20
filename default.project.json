@@ -60,6 +60,7 @@
       "Ability": { "$path": "Ability.server.lua" },
       "WeaponState": { "$path": "WeaponState.server.lua" },
       "WorldEnvironment": { "$path": "WorldEnvironment.server.lua" },
+      "PlayerData": { "$path": "PlayerData.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" }
     },
     "StarterPlayer": {
