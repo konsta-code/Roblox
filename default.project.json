@@ -36,7 +36,8 @@
       "TeamAssignment": { "$path": "TeamAssignment.server.lua" },
       "Chaingun": { "$path": "Chaingun.server.lua" },
       "ProjectileWeapon": { "$path": "ProjectileWeapon.server.lua" },
-      "MovementGuard": { "$path": "MovementGuard.server.lua" }
+      "MovementGuard": { "$path": "MovementGuard.server.lua" },
+      "MapBuilder": { "$path": "MapBuilder.server.lua" }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
