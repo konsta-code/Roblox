@@ -88,16 +88,23 @@ selectEvent.OnServerEvent:Connect(function(player: Player, requestedLoadout: any
 		selectEvent:FireClient(player, false, "Loadout-Wechsel noch im Cooldown")
 		return
 	end
-	if not canChangeNow(player) then
-		selectEvent:FireClient(player, false, "Loadout nur im Warmup, nach dem Tod oder direkt am Spawn")
-		return
-	end
-
 	lastChange[player] = now
+	-- Auswahl IMMER merken - sie gilt spätestens beim nächsten Spawn. applyLoadout
+	-- wendet das Loadout-Attribut bei jedem CharacterAdded an, also auch beim
+	-- nächsten natürlichen Respawn nach dem Tod.
 	player:SetAttribute("Loadout", loadoutId)
-	applyPlayerAttributes(player, definition)
-	selectEvent:FireClient(player, true, definition.displayName .. " ausgewählt")
-	player:LoadCharacter()
+
+	if canChangeNow(player) then
+		-- Warmup / tot / Inventar-Station / ForceField: sofort anwenden + neu spawnen.
+		applyPlayerAttributes(player, definition)
+		selectEvent:FireClient(player, true, definition.displayName .. " ausgewählt")
+		player:LoadCharacter()
+	else
+		-- Mitten im aktiven Leben: KEIN Instant-Klassenwechsel im Kampf, aber die
+		-- Wahl greift beim nächsten Tod/Respawn (vorher wurde sie hier komplett
+		-- verworfen - Ursache für "Klasse ändert sich nicht nach dem Tod").
+		selectEvent:FireClient(player, true, definition.displayName .. " - aktiv ab nächstem Spawn")
+	end
 end)
 
 Players.PlayerAdded:Connect(setupPlayer)
