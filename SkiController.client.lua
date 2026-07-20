@@ -27,6 +27,7 @@ local State = {
 	jetpackAlpha = 0,
 	jetpackStartTime = 0,
 	wasJetpacking = false,
+	hoverHeight = 3, -- Ziel-Abstand RootPart-Mitte -> Boden, ersetzt HipHeight
 }
 
 local Input = {
@@ -71,6 +72,13 @@ local function setupCharacter(newCharacter: Model)
 	-- updateFacing() jeden Frame aufrecht, der Character kippt also nicht.
 	humanoid.PlatformStand = true
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+
+	-- Schwebehöhe aus der Avatar-Geometrie: PlatformStand deaktiviert die
+	-- HipHeight-Beinfeder, die den RootPart sonst so hoch hält, dass die Füße
+	-- genau auf dem Boden stehen. Denselben Abstand halten wir unten selbst
+	-- (RootPart-Mitte = HipHeight + halbe RootPart-Höhe über dem Boden), sonst
+	-- sinken die Füße in den Boden ein.
+	State.hoverHeight = humanoid.HipHeight + rootPart.Size.Y / 2
 
 	groundParams.FilterDescendantsInstances = { character }
 
@@ -128,16 +136,16 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-local function checkGround(): (boolean, Vector3)
+local function checkGround(): (boolean, Vector3, number)
 	local result = workspace:Raycast(
 		rootPart.Position,
 		Vector3.new(0, -Constants.GROUND_CHECK_DISTANCE, 0),
 		groundParams
 	)
 	if result and result.Normal.Y >= Constants.MAX_WALKABLE_NORMAL_Y then
-		return true, result.Normal
+		return true, result.Normal, result.Distance
 	end
-	return false, Vector3.yAxis
+	return false, Vector3.yAxis, math.huge
 end
 
 local function getSkiControl(speed: number): number
@@ -285,7 +293,7 @@ RunService.Heartbeat:Connect(function(dt)
 	dt = math.min(dt, 1 / 20)
 
 	updateMoveVector()
-	local grounded, normal = checkGround()
+	local grounded, normal, groundDist = checkGround()
 
 	-- Kamm-/Schanzen-Absprung: fahren wir skiend über eine konvexe Kuppe
 	-- (Bergkamm, Rampen-Lippe), trägt uns das Momentum von der Fläche WEG -
@@ -321,6 +329,14 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 	if not grounded then
 		State.lastAirVelocity = State.velocity
+	end
+
+	-- Schwebehöhe halten (ersetzt die per PlatformStand abgeschaltete
+	-- HipHeight): RootPart vertikal so nachführen, dass die Füße auf der Fläche
+	-- stehen statt einzusinken. Nur am Boden und nicht beim Jetpack - dann hebt
+	-- man ohnehin ab und die Korrektur würde den Aufstieg stören.
+	if grounded and not isJetpacking then
+		rootPart.CFrame += Vector3.new(0, State.hoverHeight - groundDist, 0)
 	end
 
 	State.wasGrounded = grounded
