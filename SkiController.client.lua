@@ -331,12 +331,24 @@ RunService.Heartbeat:Connect(function(dt)
 		State.lastAirVelocity = State.velocity
 	end
 
-	-- Schwebehöhe halten (ersetzt die per PlatformStand abgeschaltete
-	-- HipHeight): RootPart vertikal so nachführen, dass die Füße auf der Fläche
-	-- stehen statt einzusinken. Nur am Boden und nicht beim Jetpack - dann hebt
-	-- man ohnehin ab und die Korrektur würde den Aufstieg stören.
-	if grounded and not isJetpacking then
-		rootPart.CFrame += Vector3.new(0, State.hoverHeight - groundDist, 0)
+	-- Beim Jetpack am Boden keine Abwärts-Geschwindigkeit in den Boden
+	-- kommandieren: während der Schub-Rampe (0 -> voll über JETPACK_RAMP_UP_TIME)
+	-- ist die Gravitation kurz stärker als der Schub, das drückte die Füße in
+	-- den Boden bis der Schub greift. Y auf >= 0 klemmen, bis man abhebt.
+	if grounded and isJetpacking and State.velocity.Y < 0 then
+		State.velocity = Vector3.new(State.velocity.X, 0, State.velocity.Z)
+	end
+
+	-- Schwebehöhe halten (ersetzt die per PlatformStand abgeschaltete HipHeight):
+	-- RootPart vertikal nachführen, damit die Füße auf der Fläche stehen statt
+	-- einzusinken. Beim Jetpack nur ANHEBEN (max(0, ...)), nie nach unten ziehen,
+	-- sonst würde die Korrektur den Aufstieg bremsen.
+	if grounded then
+		local correction = State.hoverHeight - groundDist
+		if isJetpacking then
+			correction = math.max(0, correction)
+		end
+		rootPart.CFrame += Vector3.new(0, correction, 0)
 	end
 
 	State.wasGrounded = grounded
