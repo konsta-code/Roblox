@@ -36,6 +36,7 @@ type Flag = {
 	state: FlagState,
 	carrier: Player?,
 	returnTimer: number?,
+	stand: BasePart,
 }
 
 local flags: { Flag } = {}
@@ -223,15 +224,24 @@ for _, team in Teams:GetTeams() do
 	scores[team] = 0
 end
 
-for _, standPart: Instance in CollectionService:GetTagged(Constants.FLAG_STAND_TAG) do
-	if not standPart:IsA("BasePart") then continue end
+-- Flaggen-Stände registrieren - robust gegen Timing UND Rebuilds:
+-- GetTagged erfasst bereits vorhandene Stände, GetInstanceAddedSignal die, die
+-- erst zur Laufzeit getaggt werden (MapBuilder baut die Map evtl. erst NACH
+-- diesem Script - die Reihenfolge in ServerScriptService ist nicht garantiert).
+-- GetInstanceRemovedSignal räumt Flaggen weg, deren Stand zerstört wird (z.B.
+-- wenn MapBuilder eine alte Map ersetzt). Das seen-Set verhindert Doppel.
+local seenStands: { [Instance]: boolean } = {}
+
+local function registerStand(standPart: Instance)
+	if seenStands[standPart] or not standPart:IsA("BasePart") then return end
 
 	local teamName = standPart:GetAttribute("Team")
 	local team = teamName and Teams:FindFirstChild(teamName)
 	if not team then
 		warn("FlagStand ohne gültiges Team-Attribut: " .. standPart:GetFullName())
-		continue
+		return
 	end
+	seenStands[standPart] = true
 
 	local homeCFrame = standPart.CFrame
 	local flagPart = createFlagVisual(homeCFrame, team)
@@ -243,9 +253,31 @@ for _, standPart: Instance in CollectionService:GetTagged(Constants.FLAG_STAND_T
 		state = "AtBase",
 		carrier = nil,
 		returnTimer = nil,
+		stand = standPart,
 	}
 	table.insert(flags, flag)
 	setupFlagTouch(flag)
+end
+
+local function unregisterStand(standPart: Instance)
+	if not seenStands[standPart] then return end
+	seenStands[standPart] = nil
+	for i = #flags, 1, -1 do
+		local flag = flags[i]
+		if flag.stand == standPart then
+			if flag.carrier then
+				carryStatusEvent:FireClient(flag.carrier, false, flag.team.Name)
+			end
+			flag.part:Destroy()
+			table.remove(flags, i)
+		end
+	end
+end
+
+CollectionService:GetInstanceAddedSignal(Constants.FLAG_STAND_TAG):Connect(registerStand)
+CollectionService:GetInstanceRemovedSignal(Constants.FLAG_STAND_TAG):Connect(unregisterStand)
+for _, standPart in CollectionService:GetTagged(Constants.FLAG_STAND_TAG) do
+	registerStand(standPart)
 end
 
 Players.PlayerAdded:Connect(bindDeathDrop)

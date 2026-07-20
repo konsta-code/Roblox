@@ -32,19 +32,43 @@ local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
 
 local spawnsByTeam: { [Team]: { BasePart } } = {}
 
-local function indexSpawns()
-	for _, spawnPart: Instance in CollectionService:GetTagged(Constants.SPAWN_TAG) do
-		if not spawnPart:IsA("BasePart") then continue end
+local seenSpawns: { [Instance]: boolean } = {}
 
-		local teamName = spawnPart:GetAttribute("Team")
-		local team = teamName and Teams:FindFirstChild(teamName)
-		if not team then
-			warn("PlayerSpawn ohne gültiges Team-Attribut: " .. spawnPart:GetFullName())
-			continue
+local function registerSpawn(spawnPart: Instance)
+	if seenSpawns[spawnPart] or not spawnPart:IsA("BasePart") then return end
+
+	local teamName = spawnPart:GetAttribute("Team")
+	local team = teamName and Teams:FindFirstChild(teamName)
+	if not team then
+		warn("PlayerSpawn ohne gültiges Team-Attribut: " .. spawnPart:GetFullName())
+		return
+	end
+	seenSpawns[spawnPart] = true
+
+	spawnsByTeam[team] = spawnsByTeam[team] or {}
+	table.insert(spawnsByTeam[team], spawnPart)
+end
+
+local function unregisterSpawn(spawnPart: Instance)
+	if not seenSpawns[spawnPart] then return end
+	seenSpawns[spawnPart] = nil
+	for _, list in spawnsByTeam do
+		local idx = table.find(list, spawnPart)
+		if idx then
+			table.remove(list, idx)
 		end
+	end
+end
 
-		spawnsByTeam[team] = spawnsByTeam[team] or {}
-		table.insert(spawnsByTeam[team], spawnPart)
+-- Robust gegen Timing (MapBuilder taggt die Spawns evtl. erst NACH diesem
+-- Script - Reihenfolge in ServerScriptService nicht garantiert) und gegen
+-- Rebuilds: vorhandene via GetTagged, spätere via Added-Signal, entfernte via
+-- Removed-Signal. seen-Set verhindert Doppel-Registrierung.
+local function indexSpawns()
+	CollectionService:GetInstanceAddedSignal(Constants.SPAWN_TAG):Connect(registerSpawn)
+	CollectionService:GetInstanceRemovedSignal(Constants.SPAWN_TAG):Connect(unregisterSpawn)
+	for _, spawnPart in CollectionService:GetTagged(Constants.SPAWN_TAG) do
+		registerSpawn(spawnPart)
 	end
 end
 
