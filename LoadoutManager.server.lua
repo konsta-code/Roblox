@@ -32,6 +32,15 @@ local function getDefinition(loadoutId: any): (Constants.LoadoutId?, Constants.L
 end
 
 local function applyLoadout(player: Player, character: Model)
+	-- Ausstehende Auswahl beim Spawn übernehmen: das aktive Loadout-Attribut,
+	-- das Waffen/Fähigkeit/Granate/HUD/Viewmodel LIVE lesen, wechselt so
+	-- ausschließlich hier beim CharacterAdded - nie mitten im Leben.
+	local pendingId = getDefinition(player:GetAttribute("PendingLoadout"))
+	if pendingId then
+		player:SetAttribute("Loadout", pendingId)
+		player:SetAttribute("PendingLoadout", nil)
+	end
+
 	local loadoutId, definition = getDefinition(player:GetAttribute("Loadout"))
 	if not loadoutId or not definition then
 		loadoutId = Constants.DEFAULT_LOADOUT
@@ -75,11 +84,12 @@ selectEvent.OnServerEvent:Connect(function(player: Player, requestedLoadout: any
 		return
 	end
 	lastChange[player] = now
-	-- Auswahl NUR merken - sie greift ausschließlich beim nächsten Spawn nach dem
-	-- Tod. KEIN sofortiger Respawn (bewusster Nutzer-Wunsch: immer erst beim
-	-- nächsten Tod). applyLoadout wendet das Loadout-Attribut bei jedem
-	-- CharacterAdded an, also automatisch beim nächsten natürlichen Respawn.
-	player:SetAttribute("Loadout", loadoutId)
+	-- Auswahl NUR als AUSSTEHEND merken (PendingLoadout). Das aktive Loadout-
+	-- Attribut, das Waffen/Fähigkeit/Granate/HUD/Viewmodel live lesen, wechselt
+	-- erst beim nächsten Respawn (applyLoadout übernimmt PendingLoadout beim
+	-- CharacterAdded). So gibt es KEINEN sofortigen Waffen-/Klassenwechsel im
+	-- Leben - alles wechselt gemeinsam erst nach dem Tod.
+	player:SetAttribute("PendingLoadout", loadoutId)
 	selectEvent:FireClient(player, true, definition.displayName .. " - aktiv ab nächstem Tod")
 end)
 
