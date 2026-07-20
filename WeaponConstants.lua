@@ -30,7 +30,7 @@ Constants.FIRE_COOLDOWN = 1.5
 -- SELF_KNOCKBACK_MULT: die rohen T:A-Werte fühlten sich in Roblox zu stark an
 -- (Boden-Boost zu heftig) -> Disc-Jump-Stärke hier zentral herunterskalieren.
 -- 1.0 = roher T:A-Wert. Höher = mehr Boost, niedriger = weniger.
-Constants.SELF_KNOCKBACK_MULT = 0.45
+Constants.SELF_KNOCKBACK_MULT = 0.3
 Constants.SELF_KNOCKBACK_SPEED = (85000 * 1.2) / 100 / Constants.UU_PER_STUD * Constants.SELF_KNOCKBACK_MULT
 Constants.SELF_KNOCKBACK_UP_SPEED = 90000 / 100 / Constants.UU_PER_STUD * Constants.SELF_KNOCKBACK_MULT
 Constants.MAX_EXTERNAL_IMPULSE = 140
