@@ -2,7 +2,11 @@
   "name": "CTFGame",
   "tree": {
     "$className": "DataModel",
-
+    "Workspace": {
+      "$properties": {
+        "Gravity": 0
+      }
+    },
     "ReplicatedStorage": {
       "Modules": {
         "$className": "Folder",
@@ -22,7 +26,6 @@
       "FlagCarryStatus": { "$className": "RemoteEvent" },
       "MatchStateChanged": { "$className": "RemoteEvent" }
     },
-
     "ServerScriptService": {
       "CTFManager": { "$path": "CTFManager.server.lua" },
       "MatchManager": { "$path": "MatchManager.server.lua" },
@@ -31,7 +34,6 @@
       "Chaingun": { "$path": "Chaingun.server.lua" },
       "ProjectileWeapon": { "$path": "ProjectileWeapon.server.lua" }
     },
-
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "SkiController": { "$path": "SkiController.client.lua" },
@@ -40,7 +42,6 @@
         "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" }
       }
     },
-
     "Teams": {
       "Red": { "$className": "Team" },
       "Blue": { "$className": "Team" }
