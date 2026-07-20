@@ -204,31 +204,8 @@ inventoryEvent.OnClientEvent:Connect(function(success: boolean, message: string)
 	end
 end)
 
--- Auto-Öffnen bei neuer Warmup-Runde (Attribut-Signal, falls Phase wechselt).
-local function autoOpenIfWarmup()
-	if not overlay.Visible and ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
+task.delay(0.8, function()
+	if ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
 		setOpen(true)
 	end
-end
-ReplicatedStorage:GetAttributeChangedSignal("MatchPhase"):Connect(autoOpenIfWarmup)
-
--- Erst-Öffnen DETERMINISTISCH am Charakter-Spawn - unabhängig von der
--- Attribut-Replikation (das war die fragile Stelle). Feuert garantiert beim
--- ersten eigenen Spawn; danach jederzeit mit L. Öffnet nie doppelt.
-local autoOpenedOnce = false
-local function autoOpenOnFirstSpawn()
-	if autoOpenedOnce then
-		return
-	end
-	autoOpenedOnce = true
-	task.wait(0.6)
-	if not overlay.Visible then
-		setOpen(true)
-	end
-end
-player.CharacterAdded:Connect(autoOpenOnFirstSpawn)
-if player.Character then
-	task.spawn(autoOpenOnFirstSpawn)
-end
-
-print("[LoadoutMenu] bereit - Auto-Oeffnen am Spawn aktiv")
+end)
