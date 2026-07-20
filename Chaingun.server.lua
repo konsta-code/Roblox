@@ -21,6 +21,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage.Modules.ChaingunConstants)
+local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
+local CombatService = require(script.Parent.CombatService)
+local BaseService = require(script.Parent.BaseService)
 
 local fireEvent = ReplicatedStorage:WaitForChild("FireChaingun")
 
@@ -30,29 +33,40 @@ local heat: { [Player]: number } = {}
 local lastHeatUpdateTime: { [Player]: number } = {}
 local overheatUntil: { [Player]: number } = {}
 
-local function getCurrentHeat(player: Player, now: number): number
+local function getCurrentHeat(player: Player, now: number, profile: ClassKitConstants.AutomaticProfile): number
 	local last = lastHeatUpdateTime[player] or now
 	local elapsed = now - last
-	return math.max(0, (heat[player] or 0) - Constants.HEAT_COOLDOWN_RATE * elapsed)
+	return math.max(0, (heat[player] or 0) - profile.heatCooldownRate * elapsed)
 end
 
-local function validateAndApplyDamage(shooter: Player, origin: Vector3, direction: Vector3, claimedTarget: Player)
-	if claimedTarget.Team == shooter.Team then return end
-	local targetCharacter = claimedTarget.Character
-	local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
-	if not targetHumanoid or targetHumanoid.Health <= 0 then return end
-
+local function validateAndApplyDamage(
+	shooter: Player,
+	origin: Vector3,
+	direction: Vector3,
+	profile: ClassKitConstants.AutomaticProfile
+)
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = { shooter.Character }
 
-	local result = workspace:Raycast(origin, direction.Unit * Constants.MAX_RANGE, rayParams)
-	if not result then return end
-
-	local hitCharacter = result.Instance:FindFirstAncestorOfClass("Model")
-	if hitCharacter ~= targetCharacter then return end -- Servers eigener Raycast bestätigt den Treffer nicht
-
-	targetHumanoid:TakeDamage(Constants.DAMAGE_PER_HIT)
+	local aimFrame = CFrame.lookAt(Vector3.zero, direction.Unit)
+	local pelletCount = math.clamp(math.floor(profile.pellets or 1), 1, 12)
+	for _ = 1, pelletCount do
+		local pitch = math.rad((math.random() - 0.5) * 2 * profile.spreadAngle)
+		local yaw = math.rad((math.random() - 0.5) * 2 * profile.spreadAngle)
+		local shotDirection = (aimFrame * CFrame.Angles(pitch, yaw, 0)).LookVector
+		local result = workspace:Raycast(origin, shotDirection * profile.maxRange, rayParams)
+		if result then
+			local hitCharacter = result.Instance:FindFirstAncestorOfClass("Model")
+			local targetPlayer = hitCharacter and Players:GetPlayerFromCharacter(hitCharacter)
+			local targetHumanoid = hitCharacter and hitCharacter:FindFirstChildOfClass("Humanoid")
+			if targetPlayer and targetHumanoid and targetHumanoid.Health > 0 then
+				CombatService.Damage(shooter, targetHumanoid, profile.damagePerHit, profile.name)
+			else
+				BaseService.DamageHit(shooter, result.Instance, profile.damagePerHit)
+			end
+		end
+	end
 end
 
 local function isFiniteVector(value: any): boolean
@@ -61,8 +75,9 @@ local function isFiniteVector(value: any): boolean
 		and math.abs(value.X) < 1e6 and math.abs(value.Y) < 1e6 and math.abs(value.Z) < 1e6
 end
 
-local function tryFire(player: Player, direction: any, claimedTarget: any)
+local function tryFire(player: Player, direction: any)
 	local now = os.clock()
+	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).automatic
 
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -76,34 +91,44 @@ local function tryFire(player: Player, direction: any, claimedTarget: any)
 	end
 
 	local last = lastFireTime[player] or 0
-	if now - last > Constants.MAX_FIRE_INTERVAL * 1.5 then
-		chainStartTime[player] = now -- Pause war lang genug: neue Feuersequenz, Spin-up von vorn
-	end
+	local singleShotCooldown = profile.singleShotCooldown
+	if singleShotCooldown then
+		if now - last < singleShotCooldown then
+			return
+		end
+	else
+		if now - last > profile.maxFireInterval * 1.5 then
+			chainStartTime[player] = now -- Pause war lang genug: neue Feuersequenz, Spin-up von vorn
+		end
 
-	local spinProgress = math.clamp((now - (chainStartTime[player] or now)) / Constants.SPIN_UP_TIME, 0, 1)
-	local requiredInterval = Constants.MAX_FIRE_INTERVAL
-		- (Constants.MAX_FIRE_INTERVAL - Constants.MIN_FIRE_INTERVAL) * spinProgress
-
-	if now - last < requiredInterval then
-		return -- schneller als der aktuelle Spin-up-Zustand erlaubt
+		local spinProgress = math.clamp((now - (chainStartTime[player] or now)) / profile.spinUpTime, 0, 1)
+		local requiredInterval = profile.maxFireInterval
+			- (profile.maxFireInterval - profile.minFireInterval) * spinProgress
+		if now - last < requiredInterval then
+			return -- schneller als der aktuelle Spin-up-Zustand erlaubt
+		end
 	end
 	lastFireTime[player] = now
 
-	local newHeat = getCurrentHeat(player, now) + Constants.HEAT_PER_SHOT
+	local newHeat = getCurrentHeat(player, now, profile) + profile.heatPerShot
 	if newHeat >= Constants.HEAT_MAX then
-		overheatUntil[player] = now + Constants.OVERHEAT_LOCKOUT
+		overheatUntil[player] = now + profile.overheatLockout
 		newHeat = Constants.HEAT_MAX
 	end
 	heat[player] = newHeat
 	lastHeatUpdateTime[player] = now
 
-	if typeof(claimedTarget) == "Instance" and claimedTarget:IsA("Player") then
-		validateAndApplyDamage(player, origin, direction, claimedTarget)
-	end
+	validateAndApplyDamage(player, origin, direction, profile)
 end
 
-fireEvent.OnServerEvent:Connect(function(player: Player, direction: any, claimedTarget: any)
-	tryFire(player, direction, claimedTarget)
+fireEvent.OnServerEvent:Connect(function(player: Player, direction: any, _claimedTarget: any)
+	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
+	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end
+	-- Serverautoritative Waffenwahl (WeaponState.server): nur feuern, wenn die
+	-- Chaingun wirklich ausgerüstet ist - verhindert gleichzeitiges Feuern
+	-- beider Waffen über gespoofte Remotes.
+	if player:GetAttribute("EquippedWeapon") ~= "Chaingun" then return end
+	tryFire(player, direction)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

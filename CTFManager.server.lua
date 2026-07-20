@@ -23,6 +23,8 @@ local RunService = game:GetService("RunService")
 
 local Constants = require(ReplicatedStorage.Modules.FlagConstants)
 local CTFSignals = require(ReplicatedStorage.Modules.CTFSignals)
+local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
+local CombatService = require(script.Parent.CombatService)
 
 local scoreEvent = ReplicatedStorage:WaitForChild("CTFScoreUpdate")
 local carryStatusEvent = ReplicatedStorage:WaitForChild("FlagCarryStatus")
@@ -75,7 +77,7 @@ local function returnFlagToBase(flag: Flag)
 	flag.part.CFrame = flag.homeCFrame
 	flag.part.Parent = workspace
 
-	if previousCarrier then
+	if previousCarrier and previousCarrier.Parent == Players then
 		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
 	end
 end
@@ -90,7 +92,7 @@ local function dropFlag(flag: Flag, atPosition: Vector3)
 	flag.part.CFrame = CFrame.new(atPosition)
 	flag.part.Parent = workspace
 
-	if previousCarrier then
+	if previousCarrier and previousCarrier.Parent == Players then
 		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
 	end
 end
@@ -129,18 +131,32 @@ local function findFlagByTeam(team: Team): Flag?
 	return nil
 end
 
+local function setScore(team: Team, value: number, scoringPlayerName: string?)
+	scores[team] = value
+	ReplicatedStorage:SetAttribute("CTFScore_" .. team.Name, value)
+	scoreEvent:FireAllClients(team.Name, value, scoringPlayerName)
+end
+
+local function resetAllFlags()
+	for _, flag in flags do
+		returnFlagToBase(flag)
+	end
+end
+
 local function onCapture(flag: Flag, scoringPlayer: Player)
 	local scoringTeam = scoringPlayer.Team :: Team?
 	if not scoringTeam then return end
 
-	scores[scoringTeam] = (scores[scoringTeam] or 0) + 1
-	scoreEvent:FireAllClients(scoringTeam.Name, scores[scoringTeam], scoringPlayer.Name)
-	CTFSignals.FireCaptureOccurred(scoringTeam, scores[scoringTeam])
+	local newScore = (scores[scoringTeam] or 0) + 1
+	setScore(scoringTeam, newScore, scoringPlayer.Name)
+	CombatService.AddCapture(scoringPlayer)
+	CTFSignals.FireCaptureOccurred(scoringTeam, newScore)
 
 	returnFlagToBase(flag)
 end
 
 local function checkCaptureCondition(carrierFlag: Flag, player: Player)
+	if MatchSignals.GetPhase() ~= "InProgress" then return end
 	local team = player.Team :: Team?
 	if not team then return end
 
@@ -158,6 +174,7 @@ local function checkCaptureCondition(carrierFlag: Flag, player: Player)
 end
 
 local function tryPickup(flag: Flag, player: Player)
+	if MatchSignals.GetPhase() ~= "InProgress" then return end
 	local team = player.Team :: Team?
 	if not team then return end
 
@@ -185,7 +202,7 @@ local function setupFlagTouch(flag: Flag)
 end
 
 local function bindDeathDrop(player: Player)
-	player.CharacterAdded:Connect(function(character)
+	local function bindCharacter(character: Model)
 		local humanoid = character:WaitForChild("Humanoid")
 		humanoid.Died:Connect(function()
 			for _, flag in flags do
@@ -195,7 +212,9 @@ local function bindDeathDrop(player: Player)
 				end
 			end
 		end)
-	end)
+	end
+	player.CharacterAdded:Connect(bindCharacter)
+	if player.Character then bindCharacter(player.Character) end
 end
 
 RunService.Heartbeat:Connect(function(dt)
@@ -213,15 +232,28 @@ end)
 
 CTFSignals.ResetScoresRequested:Connect(function()
 	for team in pairs(scores) do
-		scores[team] = 0
-		scoreEvent:FireAllClients(team.Name, 0)
+		setScore(team, 0)
 	end
+	resetAllFlags()
+end)
+
+CTFSignals.FlagFumbleRequested:Connect(function(player: Player)
+	for _, flag in flags do
+		if flag.state == "Carried" and flag.carrier == player then
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			dropFlag(flag, root and root.Position or flag.homeCFrame.Position)
+		end
+	end
+end)
+
+MatchSignals.PhaseChanged:Connect(function(newPhase: MatchSignals.MatchPhase)
+	if newPhase ~= "InProgress" then resetAllFlags() end
 end)
 
 -- === Setup ===
 
 for _, team in Teams:GetTeams() do
-	scores[team] = 0
+	setScore(team, 0)
 end
 
 -- Flaggen-Stände registrieren - robust gegen Timing UND Rebuilds:
@@ -284,3 +316,11 @@ Players.PlayerAdded:Connect(bindDeathDrop)
 for _, player in Players:GetPlayers() do
 	bindDeathDrop(player)
 end
+
+Players.PlayerRemoving:Connect(function(player)
+	for _, flag in flags do
+		if flag.state == "Carried" and flag.carrier == player then
+			returnFlagToBase(flag)
+		end
+	end
+end)

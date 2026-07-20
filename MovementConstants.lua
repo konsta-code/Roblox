@@ -5,7 +5,7 @@
 
 local Constants = {}
 
-Constants.BUILD_ID = "tribes-core-1"
+Constants.BUILD_ID = "tribes-core-4"
 Constants.UU_PER_STUD = 20
 
 -- Base movement (TrFamilyInfo: GroundSpeed 440, JumpZ 322).
@@ -57,6 +57,9 @@ Constants.JETPACK_TERMINAL_SPEED = 3000 / Constants.UU_PER_STUD
 
 -- Server sanity limits leave room for a full-strength disc jump.
 Constants.SERVER_MAX_LINEAR_SPEED = 225
+Constants.SERVER_MAX_TELEPORT_SPEED = 500
+Constants.SERVER_MAX_ACCELERATION = 2500
+Constants.SERVER_SPAWN_GRACE_TIME = 3
 Constants.MAX_EXTERNAL_IMPULSE = 140
 
 return Constants

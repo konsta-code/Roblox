@@ -34,6 +34,30 @@ local spawnsByTeam: { [Team]: { BasePart } } = {}
 
 local seenSpawns: { [Instance]: boolean } = {}
 
+local function grantSpawnProtection(character: Model)
+	local oldForceField = character:FindFirstChildOfClass("ForceField")
+	if oldForceField then
+		oldForceField:Destroy()
+	end
+
+	local forceField = Instance.new("ForceField")
+	forceField.Name = "SpawnProtection"
+	forceField.Visible = false
+	forceField.Parent = character
+	task.delay(Constants.SPAWN_PROTECTION_DURATION, function()
+		if forceField.Parent then
+			forceField:Destroy()
+		end
+	end)
+end
+
+local function bindSpawnProtection(player: Player)
+	player.CharacterAdded:Connect(grantSpawnProtection)
+	if player.Character then
+		grantSpawnProtection(player.Character)
+	end
+end
+
 local function registerSpawn(spawnPart: Instance)
 	if seenSpawns[spawnPart] or not spawnPart:IsA("BasePart") then return end
 
@@ -91,6 +115,16 @@ local function teleportToTeamSpawn(player: Player)
 	end
 
 	character:PivotTo(spawnCFrame)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Health = humanoid.MaxHealth
+	end
+	grantSpawnProtection(character)
 end
 
 MatchSignals.RoundStarted:Connect(function()
@@ -100,3 +134,8 @@ MatchSignals.RoundStarted:Connect(function()
 end)
 
 indexSpawns()
+
+Players.PlayerAdded:Connect(bindSpawnProtection)
+for _, player in Players:GetPlayers() do
+	bindSpawnProtection(player)
+end

@@ -32,9 +32,15 @@ type MatchPhase = "Warmup" | "InProgress" | "PostMatch"
 local phase: MatchPhase = "Warmup"
 local phaseTimeRemaining = Constants.WARMUP_DURATION
 local liveScores: { [Team]: number } = {}
+local lastBroadcastSecond = -1
 
 local function broadcastState(winnerName: string?)
-	matchStateEvent:FireAllClients(phase, math.max(0, math.ceil(phaseTimeRemaining)), winnerName)
+	local roundedTime = math.max(0, math.ceil(phaseTimeRemaining))
+	lastBroadcastSecond = roundedTime
+	ReplicatedStorage:SetAttribute("MatchPhase", phase)
+	ReplicatedStorage:SetAttribute("MatchTimeRemaining", roundedTime)
+	ReplicatedStorage:SetAttribute("MatchWinner", winnerName)
+	matchStateEvent:FireAllClients(phase, roundedTime, winnerName)
 end
 
 local function enoughPlayers(): boolean
@@ -44,6 +50,7 @@ end
 local function startWarmup()
 	phase = "Warmup"
 	phaseTimeRemaining = Constants.WARMUP_DURATION
+	MatchSignals.SetPhase(phase)
 	broadcastState()
 end
 
@@ -57,6 +64,7 @@ local function startMatch()
 		liveScores[team] = 0
 	end
 
+	MatchSignals.SetPhase(phase)
 	broadcastState()
 	MatchSignals.FireRoundStarted()
 end
@@ -64,6 +72,7 @@ end
 local function endMatch()
 	phase = "PostMatch"
 	phaseTimeRemaining = Constants.POSTMATCH_DURATION
+	MatchSignals.SetPhase(phase)
 
 	local winner: Team? = nil
 	local highest = -1
@@ -91,6 +100,10 @@ end)
 
 RunService.Heartbeat:Connect(function(dt)
 	phaseTimeRemaining -= dt
+	if math.max(0, math.ceil(phaseTimeRemaining)) ~= lastBroadcastSecond then
+		local winnerAttribute = ReplicatedStorage:GetAttribute("MatchWinner")
+		broadcastState(if typeof(winnerAttribute) == "string" then winnerAttribute else nil)
+	end
 	if phaseTimeRemaining > 0 then return end
 
 	if phase == "Warmup" then

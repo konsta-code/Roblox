@@ -2,6 +2,7 @@
 -- Tribes-style skiing and jetpacking adapted from public T:A defaults.
 
 local Players = game:GetService("Players")
+local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -30,10 +31,26 @@ local State = {
 	hoverHeight = 3, -- Ziel-Abstand RootPart-Mitte -> Boden, ersetzt HipHeight
 }
 
+local function getMaxJetpackEnergy(): number
+	local value = player:GetAttribute("MaxEnergy")
+	return if typeof(value) == "number" then math.clamp(value, 50, 150) else Constants.JETPACK_MAX_ENERGY
+end
+
+local function getMovementScale(attributeName: string, minimum: number): number
+	local value = player:GetAttribute(attributeName)
+	local baseScale = if typeof(value) == "number" then value else 1
+	local abilityValue = player:GetAttribute("AbilityMoveScale")
+	local abilityScale = if typeof(abilityValue) == "number" then abilityValue else 1
+	return math.clamp(baseScale * abilityScale, minimum, 1.5)
+end
+
 local Input = {
 	moveVector = Vector3.zero,
 	skiHeld = false,
 	jetpackHeld = false,
+	controllerMove = Vector2.zero,
+	actionSkiHeld = false,
+	actionJetpackHeld = false,
 }
 
 local groundParams = RaycastParams.new()
@@ -53,6 +70,38 @@ local function clampMagnitude(vector: Vector3, maximum: number): Vector3
 		return vector * (maximum / magnitude)
 	end
 	return vector
+end
+
+-- === Debug-Overlay (F3 schaltet ein/aus, standardmäßig aus) ===
+-- Zeigt Speed / Grounded / Ski / Jetpack / Energie. Zum dauerhaften Entfernen
+-- einfach diesen Block, den F3-Handler und den Debug-Update im Heartbeat löschen.
+local debugEnabled = false
+local debugLabel: TextLabel? = nil
+
+local function ensureDebugLabel(): TextLabel
+	if debugLabel then
+		return debugLabel
+	end
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "MovementDebug"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = player:WaitForChild("PlayerGui")
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.fromOffset(240, 104)
+	lbl.Position = UDim2.fromOffset(16, 130)
+	lbl.BackgroundTransparency = 0.35
+	lbl.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+	lbl.BorderSizePixel = 0
+	lbl.TextColor3 = Color3.fromRGB(120, 255, 160)
+	lbl.Font = Enum.Font.Code
+	lbl.TextSize = 14
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
+	lbl.TextYAlignment = Enum.TextYAlignment.Top
+	lbl.Text = ""
+	lbl.Parent = screenGui
+	debugLabel = lbl
+	return lbl
 end
 
 local function setupCharacter(newCharacter: Model)
@@ -87,10 +136,12 @@ local function setupCharacter(newCharacter: Model)
 	State.isGrounded = false
 	State.wasGrounded = false
 	State.isSkiing = false
-	State.jetpackEnergy = Constants.JETPACK_MAX_ENERGY
+	State.jetpackEnergy = getMaxJetpackEnergy()
 	State.jetpackAlpha = 0
 	State.jetpackStartTime = 0
 	State.wasJetpacking = false
+	player:SetAttribute("IsSkiing", false)
+	player:SetAttribute("IsJetpacking", false)
 	PlayerHudState.SetJetpackEnergy(State.jetpackEnergy)
 
 	print(string.format("[Movement] %s loaded", Constants.BUILD_ID))
@@ -100,6 +151,12 @@ setupCharacter(player.Character or player.CharacterAdded:Wait())
 player.CharacterAdded:Connect(setupCharacter)
 
 local function updateMoveVector()
+	if player:GetAttribute("LoadoutMenuOpen") then
+		Input.moveVector = Vector3.zero
+		Input.skiHeld = false
+		Input.jetpackHeld = false
+		return
+	end
 	local camera = workspace.CurrentCamera
 	if not camera then
 		Input.moveVector = Vector3.zero
@@ -116,23 +173,66 @@ local function updateMoveVector()
 	if UserInputService:IsKeyDown(Enum.KeyCode.S) then move -= forward end
 	if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += right end
 	if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= right end
-	Input.moveVector = move.Magnitude > 0 and move.Unit or Vector3.zero
+
+	local controllerMagnitude = Input.controllerMove.Magnitude
+	if controllerMagnitude > 0 then
+		move += forward * -Input.controllerMove.Y + right * Input.controllerMove.X
+	end
+	if humanoid and humanoid.MoveDirection.Magnitude > move.Magnitude then
+		move = horizontal(humanoid.MoveDirection)
+	end
+	Input.moveVector = if move.Magnitude > 1 then move.Unit else move
+
+	-- Kontinuierliche Abfrage der Halte-Eingaben (statt Event-Flags):
+	-- Space = Ski, Shift ODER rechte Maustaste = Jetpack.
+	Input.skiHeld = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+		or Input.actionSkiHeld
+	Input.jetpackHeld = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+		or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+		or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+		or Input.actionJetpackHeld
 end
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.KeyCode == Enum.KeyCode.Space then
-		Input.skiHeld = true
-	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		Input.jetpackHeld = true
+local function updateHoldAction(field: "actionSkiHeld" | "actionJetpackHeld", inputState: Enum.UserInputState)
+	if inputState == Enum.UserInputState.Begin then
+		Input[field] = true
+	elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+		Input[field] = false
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+ContextActionService:BindAction("TribesSki", function(_name, state)
+	return updateHoldAction("actionSkiHeld", state)
+end, true, Enum.KeyCode.ButtonL3)
+ContextActionService:SetTitle("TribesSki", "SKI")
+ContextActionService:SetPosition("TribesSki", UDim2.new(1, -190, 1, -120))
+
+ContextActionService:BindAction("TribesJetpack", function(_name, state)
+	return updateHoldAction("actionJetpackHeld", state)
+end, true, Enum.KeyCode.ButtonA)
+ContextActionService:SetTitle("TribesJetpack", "JET")
+ContextActionService:SetPosition("TribesJetpack", UDim2.new(1, -95, 1, -120))
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Gamepad1 and input.KeyCode == Enum.KeyCode.Thumbstick1 then
+		local raw = Vector2.new(input.Position.X, input.Position.Y)
+		local magnitude = raw.Magnitude
+		if magnitude <= 0.12 then
+			Input.controllerMove = Vector2.zero
+		else
+			Input.controllerMove = raw.Unit * math.clamp((magnitude - 0.12) / 0.88, 0, 1)
+		end
 	end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then
-		Input.skiHeld = false
-	elseif input.KeyCode == Enum.KeyCode.LeftShift then
-		Input.jetpackHeld = false
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.F3 then
+		debugEnabled = not debugEnabled
+		if debugLabel then
+			debugLabel.Visible = debugEnabled
+		end
 	end
 end)
 
@@ -159,7 +259,7 @@ local function applySkiing(dt: number, justLanded: boolean)
 	State.isSkiing = Input.skiHeld
 
 	if not State.isSkiing then
-		local desired = Input.moveVector * Constants.WALK_SPEED
+		local desired = Input.moveVector * Constants.WALK_SPEED * getMovementScale("WalkSpeedScale", 0.5)
 		local alpha = 1 - math.exp(-Constants.WALK_RESPONSE * dt)
 		local walkingVelocity = horizontal(State.velocity):Lerp(desired, alpha)
 		State.velocity = Vector3.new(walkingVelocity.X, 0, walkingVelocity.Z)
@@ -185,7 +285,7 @@ local function applySkiing(dt: number, justLanded: boolean)
 		local desiredOnSurface = projectOntoPlane(Input.moveVector, normal)
 		if desiredOnSurface.Magnitude > 0.001 then
 			desiredOnSurface = desiredOnSurface.Unit * speed
-			local control = getSkiControl(speed)
+			local control = getSkiControl(speed) * getMovementScale("SkiControlScale", 0.5)
 			local steerAlpha = 1 - math.exp(-Constants.SKI_STEER_RESPONSE * control * dt)
 			local steered = State.velocity:Lerp(desiredOnSurface, steerAlpha)
 			if steered.Magnitude > 0.001 then
@@ -198,7 +298,11 @@ local function applySkiing(dt: number, justLanded: boolean)
 	-- creates unlimited speed on flat terrain.
 	if speed < Constants.SKI_ACCEL_CAP_SPEED and Input.moveVector.Magnitude > 0 then
 		local assist = projectOntoPlane(Input.moveVector, normal)
-		State.velocity += assist * Constants.AIR_CONTROL_ACCELERATION * Constants.SKI_ACCEL_PCT * dt
+		State.velocity += assist
+			* Constants.AIR_CONTROL_ACCELERATION
+			* getMovementScale("AirControlScale", 0.5)
+			* Constants.SKI_ACCEL_PCT
+			* dt
 	end
 
 	State.velocity = clampMagnitude(State.velocity, Constants.SKI_TERMINAL_SPEED)
@@ -212,7 +316,10 @@ end
 local function applyAirAndJetpack(dt: number, isJetpacking: boolean)
 	State.isSkiing = false
 	State.velocity += Vector3.new(0, -Constants.GRAVITY * dt, 0)
-	State.velocity += Input.moveVector * Constants.AIR_CONTROL_ACCELERATION * dt
+	State.velocity += Input.moveVector
+		* Constants.AIR_CONTROL_ACCELERATION
+		* getMovementScale("AirControlScale", 0.5)
+		* dt
 
 	if not isJetpacking then return end
 
@@ -238,7 +345,11 @@ local function applyAirAndJetpack(dt: number, isJetpacking: boolean)
 	)
 	local initialBoost = Constants.JETPACK_INIT_BOOST_ACCELERATION * initRemaining * speedThrottle
 
-	State.velocity += desiredDirection * (thrustAcceleration + initialBoost) * ramp * dt
+	State.velocity += desiredDirection
+		* (thrustAcceleration + initialBoost)
+		* getMovementScale("JetThrustScale", 0.5)
+		* ramp
+		* dt
 	State.velocity = clampMagnitude(State.velocity, Constants.JETPACK_TERMINAL_SPEED)
 end
 
@@ -258,7 +369,7 @@ local function updateJetpack(dt: number): boolean
 	else
 		State.jetpackAlpha = math.max(0, State.jetpackAlpha - dt / Constants.JETPACK_RAMP_DOWN_TIME)
 		State.jetpackEnergy = math.min(
-			Constants.JETPACK_MAX_ENERGY,
+			getMaxJetpackEnergy(),
 			State.jetpackEnergy + Constants.JETPACK_REGEN_RATE * dt
 		)
 	end
@@ -281,6 +392,7 @@ movementImpulse.OnClientEvent:Connect(function(impulse)
 	if typeof(impulse) ~= "Vector3" then return end
 	if impulse.X ~= impulse.X or impulse.Y ~= impulse.Y or impulse.Z ~= impulse.Z then return end
 	local safeImpulse = clampMagnitude(impulse, Constants.MAX_EXTERNAL_IMPULSE)
+		* getMovementScale("ImpulseScale", 0.4)
 	State.velocity += safeImpulse
 	State.lastAirVelocity = State.velocity
 	if rootPart and rootPart.Parent then
@@ -352,6 +464,22 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	State.wasGrounded = grounded
+	player:SetAttribute("IsSkiing", State.isSkiing and grounded)
+	player:SetAttribute("IsJetpacking", isJetpacking)
 	updateFacing()
 	rootPart.AssemblyLinearVelocity = State.velocity
+
+	if debugEnabled then
+		local lbl = ensureDebugLabel()
+		lbl.Visible = true
+		lbl.Text = string.format(
+			"[%s]\nspeed:    %.1f\ngrounded: %s\nski:      %s\njetpack:  %s\nenergy:   %.0f",
+			Constants.BUILD_ID,
+			State.velocity.Magnitude,
+			tostring(grounded),
+			tostring(State.isSkiing),
+			tostring(isJetpacking),
+			State.jetpackEnergy
+		)
+	end
 end)

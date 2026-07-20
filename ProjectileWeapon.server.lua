@@ -6,8 +6,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
 
 local Constants = require(ReplicatedStorage.Modules.WeaponConstants)
+local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
+local CombatService = require(script.Parent.CombatService)
+local BaseService = require(script.Parent.BaseService)
 local fireEvent = ReplicatedStorage:WaitForChild("FireWeapon")
 local movementImpulse = ReplicatedStorage:WaitForChild("MovementImpulse")
 
@@ -19,6 +24,8 @@ type Projectile = {
 	character: Model,
 	rayParams: RaycastParams,
 	spawnTime: number,
+	profile: ClassKitConstants.DiscProfile,
+	targetRoot: BasePart?,
 }
 
 local projectiles: { Projectile } = {}
@@ -30,22 +37,43 @@ local function isFiniteVector(value: any): boolean
 		and math.abs(value.X) < 1e6 and math.abs(value.Y) < 1e6 and math.abs(value.Z) < 1e6
 end
 
-local function getSplashDamage(distance: number): number
-	if distance > Constants.SPLASH_RADIUS then return 0 end
-	local ratio = distance / Constants.SPLASH_RADIUS
+local function getSplashDamage(profile: ClassKitConstants.DiscProfile, distance: number): number
+	if distance > profile.splashRadius then return 0 end
+	local ratio = distance / profile.splashRadius
 	if ratio <= Constants.SPLASH_FULL_DAMAGE_PCT then
-		return Constants.SPLASH_MAX_DAMAGE
+		return profile.splashMaxDamage
 	end
 	if ratio >= Constants.SPLASH_MIN_DAMAGE_PCT then
-		return Constants.SPLASH_MIN_DAMAGE
+		return profile.splashMinDamage
 	end
 	local alpha = (ratio - Constants.SPLASH_FULL_DAMAGE_PCT)
 		/ (Constants.SPLASH_MIN_DAMAGE_PCT - Constants.SPLASH_FULL_DAMAGE_PCT)
-	return Constants.SPLASH_MAX_DAMAGE
-		+ (Constants.SPLASH_MIN_DAMAGE - Constants.SPLASH_MAX_DAMAGE) * alpha
+	return profile.splashMaxDamage
+		+ (profile.splashMinDamage - profile.splashMaxDamage) * alpha
 end
 
-local function showExplosion(position: Vector3)
+local function hasExplosionLineOfSight(
+	position: Vector3,
+	targetCharacter: Model,
+	targetRoot: BasePart,
+	shooterCharacter: Model?
+): boolean
+	local offset = targetRoot.Position - position
+	if offset.Magnitude <= 0.1 then return true end
+
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	local excluded = { targetCharacter }
+	if shooterCharacter then table.insert(excluded, shooterCharacter) end
+	rayParams.FilterDescendantsInstances = excluded
+
+	local direction = offset.Unit
+	local origin = position + direction * 0.02
+	local distance = math.max(0, offset.Magnitude - 0.04)
+	return workspace:Raycast(origin, direction * distance, rayParams) == nil
+end
+
+local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscProfile)
 	local sphere = Instance.new("Part")
 	sphere.Name = "SpinfusorExplosion"
 	sphere.Shape = Enum.PartType.Ball
@@ -55,26 +83,63 @@ local function showExplosion(position: Vector3)
 	sphere.CanCollide = false
 	sphere.CanQuery = false
 	sphere.Material = Enum.Material.Neon
-	sphere.Color = Color3.fromRGB(80, 190, 255)
+	sphere.Color = profile.projectileColor
 	sphere.Transparency = 0.2
 	sphere.Parent = workspace
 
-	task.delay(0.12, function()
-		if sphere.Parent then sphere:Destroy() end
-	end)
+	local light = Instance.new("PointLight")
+	light.Color = profile.projectileColor
+	light.Brightness = 4
+	light.Range = math.max(18, profile.splashRadius * 1.3)
+	light.Shadows = true
+	light.Parent = sphere
+
+	local flash = Instance.new("ParticleEmitter")
+	flash.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	flash.Color = ColorSequence.new(profile.projectileColor, Color3.new(1, 1, 1))
+	flash.LightEmission = 1
+	flash.Lifetime = NumberRange.new(0.16, 0.35)
+	flash.Speed = NumberRange.new(12, 28)
+	flash.SpreadAngle = Vector2.new(180, 180)
+	flash.Rate = 0
+	flash.Parent = sphere
+	flash:Emit(math.clamp(math.floor(profile.splashRadius * 1.5), 12, 38))
+
+	local impactSound = Instance.new("Sound")
+	impactSound.SoundId = "rbxasset://sounds/collide.wav"
+	impactSound.Volume = 0.5
+	impactSound.PlaybackSpeed = math.clamp(1.25 - profile.splashRadius / 70, 0.72, 1.05)
+	impactSound.RollOffMinDistance = 10
+	impactSound.RollOffMaxDistance = 220
+	impactSound.Parent = sphere
+	impactSound:Play()
+
+	TweenService:Create(sphere, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.one * profile.splashRadius * 2,
+		Transparency = 1,
+	}):Play()
+	TweenService:Create(light, TweenInfo.new(0.18), { Brightness = 0, Range = 0 }):Play()
+	Debris:AddItem(sphere, 0.65)
 end
 
-local function applyExplosion(position: Vector3, shooter: Player, directHumanoid: Humanoid?)
+local function applyExplosion(
+	position: Vector3,
+	shooter: Player,
+	directHumanoid: Humanoid?,
+	profile: ClassKitConstants.DiscProfile
+)
 	for _, targetPlayer in Players:GetPlayers() do
 		local targetCharacter = targetPlayer.Character
 		local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
 		local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
 		local canDamage = targetPlayer == shooter or targetPlayer.Team ~= shooter.Team
-		if canDamage and targetRoot and targetRoot:IsA("BasePart")
+		if canDamage and targetCharacter and targetRoot and targetRoot:IsA("BasePart")
 			and targetHumanoid and targetHumanoid.Health > 0
 			and targetHumanoid ~= directHumanoid then
-			local damage = getSplashDamage((targetRoot.Position - position).Magnitude)
-			if damage > 0 then targetHumanoid:TakeDamage(damage) end
+			local damage = getSplashDamage(profile, (targetRoot.Position - position).Magnitude)
+			if damage > 0 and hasExplosionLineOfSight(position, targetCharacter, targetRoot, shooter.Character) then
+				CombatService.Damage(shooter, targetHumanoid, damage, profile.name)
+			end
 		end
 	end
 
@@ -82,12 +147,12 @@ local function applyExplosion(position: Vector3, shooter: Player, directHumanoid
 	local shooterRoot = shooterCharacter and shooterCharacter:FindFirstChild("HumanoidRootPart")
 	if shooterRoot and shooterRoot:IsA("BasePart") then
 		local offset = shooterRoot.Position - position
-		local damage = getSplashDamage(offset.Magnitude)
+		local damage = getSplashDamage(profile, offset.Magnitude)
 		if damage > 0 then
 			local direction = offset.Magnitude > 0.05 and offset.Unit or Vector3.yAxis
-			local strength = damage / Constants.SPLASH_MAX_DAMAGE
-			local impulse = direction * Constants.SELF_KNOCKBACK_SPEED * strength
-				+ Vector3.yAxis * Constants.SELF_KNOCKBACK_UP_SPEED * strength
+			local strength = damage / profile.splashMaxDamage
+			local impulse = direction * Constants.SELF_KNOCKBACK_SPEED * profile.selfKnockbackScale * strength
+				+ Vector3.yAxis * Constants.SELF_KNOCKBACK_UP_SPEED * profile.selfKnockbackScale * strength
 			if impulse.Magnitude > Constants.MAX_EXTERNAL_IMPULSE then
 				impulse = impulse.Unit * Constants.MAX_EXTERNAL_IMPULSE
 			end
@@ -96,7 +161,7 @@ local function applyExplosion(position: Vector3, shooter: Player, directHumanoid
 		end
 	end
 
-	showExplosion(position)
+	showExplosion(position, profile)
 end
 
 local function hitHumanoid(instance: Instance): Humanoid?
@@ -105,21 +170,81 @@ local function hitHumanoid(instance: Instance): Humanoid?
 	return model:FindFirstChildOfClass("Humanoid")
 end
 
-local function spawnProjectile(shooter: Player, character: Model, root: BasePart, direction: Vector3)
+local function findHomingTarget(
+	shooter: Player,
+	origin: Vector3,
+	direction: Vector3,
+	profile: ClassKitConstants.DiscProfile
+): BasePart?
+	local range = profile.homingRange or 0
+	if range <= 0 or (profile.homingStrength or 0) <= 0 then
+		return nil
+	end
+
+	local bestRoot: BasePart? = nil
+	local bestScore = math.huge
+	for _, targetPlayer in Players:GetPlayers() do
+		if targetPlayer ~= shooter and targetPlayer.Team ~= shooter.Team then
+			local targetCharacter = targetPlayer.Character
+			local humanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+			local root = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+			if targetCharacter and humanoid and humanoid.Health > 0 and root and root:IsA("BasePart") then
+				local offset = root.Position - origin
+				local distance = offset.Magnitude
+				if distance <= range and distance > 0.1 and direction:Dot(offset.Unit) >= 0.55 then
+					local params = RaycastParams.new()
+					params.FilterType = Enum.RaycastFilterType.Exclude
+					params.FilterDescendantsInstances = { shooter.Character }
+					local result = workspace:Raycast(origin, offset, params)
+					if result and result.Instance:IsDescendantOf(targetCharacter) then
+						local score = distance * (1.4 - direction:Dot(offset.Unit))
+						if score < bestScore then
+							bestScore = score
+							bestRoot = root
+						end
+					end
+				end
+			end
+		end
+	end
+	return bestRoot
+end
+
+local function spawnProjectile(
+	shooter: Player,
+	character: Model,
+	root: BasePart,
+	direction: Vector3,
+	profile: ClassKitConstants.DiscProfile
+)
 	local unitDirection = direction.Unit
 	local origin = root.Position + unitDirection * 2
 
 	local part = Instance.new("Part")
 	part.Name = "SpinfusorDisc"
 	part.Shape = Enum.PartType.Ball
-	part.Size = Vector3.one * Constants.PROJECTILE_RADIUS * 2
+	part.Size = Vector3.one * profile.projectileRadius * 2
 	part.Position = origin
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
 	part.Material = Enum.Material.Neon
-	part.Color = Color3.fromRGB(65, 170, 255)
+	part.Color = profile.projectileColor
 	part.Parent = workspace
+
+	local trailTop = Instance.new("Attachment")
+	trailTop.Position = Vector3.new(0, profile.projectileRadius * 0.45, 0)
+	trailTop.Parent = part
+	local trailBottom = Instance.new("Attachment")
+	trailBottom.Position = Vector3.new(0, -profile.projectileRadius * 0.45, 0)
+	trailBottom.Parent = part
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = trailTop
+	trail.Attachment1 = trailBottom
+	trail.Color = ColorSequence.new(profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.4), profile.projectileColor)
+	trail.Lifetime = 0.16
+	trail.LightEmission = 1
+	trail.Parent = part
 
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -128,20 +253,29 @@ local function spawnProjectile(shooter: Player, character: Model, root: BasePart
 	table.insert(projectiles, {
 		part = part,
 		position = origin,
-		velocity = unitDirection * Constants.PROJECTILE_SPEED
+		velocity = unitDirection * profile.projectileSpeed
 			+ root.AssemblyLinearVelocity * Constants.PROJECTILE_INHERITANCE,
 		shooter = shooter,
 		character = character,
 		rayParams = rayParams,
 		spawnTime = os.clock(),
+		profile = profile,
+		targetRoot = findHomingTarget(shooter, origin, unitDirection, profile),
 	})
 end
 
 fireEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 	if not isFiniteVector(direction) or direction.Magnitude < 0.5 then return end
+	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
+	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end
+	-- Serverautoritative Waffenwahl (WeaponState.server): nur feuern, wenn der
+	-- Spinfusor wirklich ausgerüstet ist - verhindert gleichzeitiges Feuern
+	-- beider Waffen über gespoofte Remotes.
+	if player:GetAttribute("EquippedWeapon") ~= "Spinfusor" then return end
+	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).disc
 
 	local now = os.clock()
-	if now - (lastFireTime[player] or 0) < Constants.FIRE_COOLDOWN then return end
+	if now - (lastFireTime[player] or 0) < profile.fireCooldown then return end
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -150,7 +284,20 @@ fireEvent.OnServerEvent:Connect(function(player: Player, direction: any)
 		or not root or not root:IsA("BasePart") then return end
 
 	lastFireTime[player] = now
-	spawnProjectile(player, character, root, direction)
+	local burstCount = math.clamp(math.floor(profile.burstCount or 1), 1, 6)
+	local burstInterval = math.clamp(profile.burstInterval or 0, 0, 0.4)
+	for shot = 1, burstCount do
+		task.delay((shot - 1) * burstInterval, function()
+			if player.Parent ~= Players or player.Character ~= character then
+				return
+			end
+			local currentHumanoid = character:FindFirstChildOfClass("Humanoid")
+			if not currentHumanoid or currentHumanoid.Health <= 0 or not root.Parent then
+				return
+			end
+			spawnProjectile(player, character, root, direction, profile)
+		end)
+	end
 end)
 
 RunService.Heartbeat:Connect(function(dt)
@@ -163,21 +310,49 @@ RunService.Heartbeat:Connect(function(dt)
 			if projectile.part.Parent then projectile.part:Destroy() end
 			table.remove(projectiles, index)
 		else
+			local gravity = projectile.profile.gravity or 0
+			if gravity > 0 then
+				projectile.velocity += Vector3.new(0, -gravity * dt, 0)
+			end
+			local targetRoot = projectile.targetRoot
+			if targetRoot and targetRoot.Parent and (projectile.profile.homingStrength or 0) > 0 then
+				local offset = targetRoot.Position - projectile.position
+				if offset.Magnitude > 0.1 then
+					local targetVelocity = offset.Unit * math.max(projectile.profile.projectileSpeed, projectile.velocity.Magnitude)
+					local homingAlpha = math.clamp((projectile.profile.homingStrength or 0) * dt, 0, 1)
+					projectile.velocity = projectile.velocity:Lerp(targetVelocity, homingAlpha)
+				end
+			end
 			local step = projectile.velocity * dt
 			local result = workspace:Raycast(projectile.position, step, projectile.rayParams)
 			if result then
 				local directHumanoid = hitHumanoid(result.Instance)
+				local hitBase = false
 				local directPlayer = directHumanoid
 					and Players:GetPlayerFromCharacter(directHumanoid.Parent)
 				local canDamageDirect = not directPlayer
 					or directPlayer == projectile.shooter
 					or directPlayer.Team ~= projectile.shooter.Team
 				if directHumanoid and directHumanoid.Health > 0 and canDamageDirect then
-					directHumanoid:TakeDamage(Constants.DIRECT_HIT_DAMAGE)
+					CombatService.Damage(
+						projectile.shooter,
+						directHumanoid,
+						projectile.profile.directDamage,
+						projectile.profile.name
+					)
 				else
 					directHumanoid = nil
+					hitBase = BaseService.DamageHit(projectile.shooter, result.Instance, projectile.profile.directDamage)
 				end
-				applyExplosion(result.Position, projectile.shooter, directHumanoid)
+				applyExplosion(result.Position, projectile.shooter, directHumanoid, projectile.profile)
+				BaseService.DamageExplosion(
+					projectile.shooter,
+					result.Position,
+					projectile.profile.splashRadius,
+					projectile.profile.splashMaxDamage,
+					projectile.profile.splashMinDamage,
+					hitBase and result.Instance or nil
+				)
 				projectile.part:Destroy()
 				table.remove(projectiles, index)
 			else

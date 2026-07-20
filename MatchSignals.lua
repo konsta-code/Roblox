@@ -6,6 +6,22 @@
 
 local MatchSignals = {}
 
+export type MatchPhase = "Warmup" | "InProgress" | "PostMatch"
+
+local currentPhase: MatchPhase = "Warmup"
+local phaseChanged = Instance.new("BindableEvent")
+MatchSignals.PhaseChanged = phaseChanged.Event
+
+function MatchSignals.SetPhase(phase: MatchPhase)
+	if currentPhase == phase then return end
+	currentPhase = phase
+	phaseChanged:Fire(phase)
+end
+
+function MatchSignals.GetPhase(): MatchPhase
+	return currentPhase
+end
+
 local roundStarted = Instance.new("BindableEvent")
 MatchSignals.RoundStarted = roundStarted.Event
 

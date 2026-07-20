@@ -4,7 +4,7 @@
 
 local Constants = {}
 
-Constants.BUILD_ID = "tribes-core-1"
+Constants.BUILD_ID = "tribes-core-4"
 Constants.UU_PER_STUD = 20
 
 Constants.PROJECTILE_SPEED = 3920 / Constants.UU_PER_STUD
@@ -34,9 +34,5 @@ Constants.SELF_KNOCKBACK_MULT = 0.3
 Constants.SELF_KNOCKBACK_SPEED = (85000 * 1.2) / 100 / Constants.UU_PER_STUD * Constants.SELF_KNOCKBACK_MULT
 Constants.SELF_KNOCKBACK_UP_SPEED = 90000 / 100 / Constants.UU_PER_STUD * Constants.SELF_KNOCKBACK_MULT
 Constants.MAX_EXTERNAL_IMPULSE = 140
-
--- A short client-only tracer hides replication delay without duplicating the
--- authoritative server projectile for its entire lifetime.
-Constants.CLIENT_PREDICTION_LIFETIME = 0.18
 
 return Constants

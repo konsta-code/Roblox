@@ -22,4 +22,11 @@ function CTFSignals.RequestScoreReset()
 	resetScoresRequested:Fire()
 end
 
+local flagFumbleRequested = Instance.new("BindableEvent")
+CTFSignals.FlagFumbleRequested = flagFumbleRequested.Event
+
+function CTFSignals.RequestFlagFumble(player: Player)
+	flagFumbleRequested:Fire(player)
+end
+
 return CTFSignals

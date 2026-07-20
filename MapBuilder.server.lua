@@ -40,6 +40,8 @@ local COL_METAL = Color3.fromRGB(88, 94, 102)
 local COL_DARK = Color3.fromRGB(42, 46, 54)
 local COL_RED = Color3.fromRGB(170, 52, 52)
 local COL_BLUE = Color3.fromRGB(52, 88, 172)
+local COL_STEEL = Color3.fromRGB(28, 36, 49)
+local COL_WARM_ROCK = Color3.fromRGB(113, 101, 94)
 
 -- ============================================================
 -- HELFER
@@ -118,7 +120,114 @@ skiRamp("LeftKicker", -135, 1.5, -120, 10, 70, 0, COL_SNOW, Enum.Material.Glacie
 skiRamp("RightKicker", 135, 1.5, 120, 10, 70, 0, COL_SNOW, Enum.Material.Glacier, kickers, 14)
 
 -- ============================================================
--- 4. BASEN (Red -262, Blue +262)
+-- 4. CANYON-SILHOUETTE UND ROUTENLICHTER
+-- Die Felsen stehen ausserhalb der Ski-Flaeche. Die kleineren Leuchten sind
+-- nicht kollidierbar, damit sie bei hoher Geschwindigkeit keine Route stoppen.
+-- ============================================================
+local scenery = Instance.new("Folder")
+scenery.Name = "CanyonScenery"
+scenery.Parent = map
+
+local spires = {
+	{ -215, -146, 38, -12 },
+	{ -174, 145, 54, 9 },
+	{ -126, -147, 42, 15 },
+	{ -72, 146, 62, -7 },
+	{ -18, -145, 48, 11 },
+	{ 38, 146, 58, -13 },
+	{ 91, -146, 46, 7 },
+	{ 146, 145, 66, -10 },
+	{ 204, -147, 51, 12 },
+}
+
+for index, definition in spires do
+	local x, z, height, lean = definition[1], definition[2], definition[3], definition[4]
+	local spire = slab(
+		"CanyonSpire" .. index,
+		Vector3.new(22, height, 27),
+		CFrame.new(x, height / 2, z) * CFrame.Angles(0, math.rad(index * 23), math.rad(lean)),
+		if index % 2 == 0 then COL_WARM_ROCK else COL_ROCK,
+		Enum.Material.Rock,
+		scenery,
+		true
+	)
+	spire.CastShadow = true
+
+	slab(
+		"SnowCap" .. index,
+		Vector3.new(16, 4, 21),
+		spire.CFrame * CFrame.new(0, height / 2 - 1, 0),
+		COL_SNOW,
+		Enum.Material.Snow,
+		scenery,
+		false
+	)
+end
+
+local routeLights = Instance.new("Folder")
+routeLights.Name = "RouteLights"
+routeLights.Parent = scenery
+
+for x = -200, 200, 40 do
+	for _, z in { -112, 112 } do
+		local teamColor = if x < 0 then COL_RED elseif x > 0 then COL_BLUE else Color3.fromRGB(105, 232, 255)
+		local post = slab(
+			string.format("RouteLight_%d_%d", x, z),
+			Vector3.new(1, 5, 1),
+			CFrame.new(x, 9 + math.abs(x) * 0.045, z),
+			COL_STEEL,
+			Enum.Material.Metal,
+			routeLights,
+			false
+		)
+		post.CanQuery = false
+
+		local beacon = slab(
+			"Beacon",
+			Vector3.new(1.4, 1.4, 1.4),
+			post.CFrame * CFrame.new(0, 3, 0),
+			teamColor,
+			Enum.Material.Neon,
+			routeLights,
+			false
+		)
+		beacon.Shape = Enum.PartType.Ball
+		beacon.CanQuery = false
+
+		local light = Instance.new("PointLight")
+		light.Color = teamColor
+		light.Brightness = 1.35
+		light.Range = 14
+		light.Shadows = false
+		light.Parent = beacon
+	end
+end
+
+for _, z in { -103, 103 } do
+	local monument = slab(
+		"MidfieldMonument",
+		Vector3.new(7, 24, 7),
+		CFrame.new(0, 30, z) * CFrame.Angles(0, math.rad(45), math.rad(if z < 0 then -7 else 7)),
+		COL_STEEL,
+		Enum.Material.Metal,
+		scenery,
+		false
+	)
+	monument.CanQuery = false
+	local core = slab(
+		"MidfieldCore",
+		Vector3.new(2.2, 15, 2.2),
+		monument.CFrame,
+		Color3.fromRGB(100, 223, 255),
+		Enum.Material.Neon,
+		scenery,
+		false
+	)
+	core.CanQuery = false
+end
+
+-- ============================================================
+-- 5. BASEN (Red -262, Blue +262)
 -- ============================================================
 local baseSetups = {
 	{ teamName = "Red", brick = BrickColor.new("Bright red"), sign = -1, col = COL_RED },
@@ -147,8 +256,100 @@ for _, setup in baseSetups do
 	slab("SideWallA", Vector3.new(70, 16, 4), CFrame.new(baseX, 32, -46), COL_DARK, Enum.Material.Metal, base, true)
 	slab("SideWallB", Vector3.new(70, 16, 4), CFrame.new(baseX, 32, 46), COL_DARK, Enum.Material.Metal, base, true)
 	slab("Roof", Vector3.new(48, 2, 64), CFrame.new(baseX - facing * 8, 45, 0), COL_METAL, Enum.Material.Metal, base, true)
-	slab("GeneratorRoom", Vector3.new(22, 12, 28), CFrame.new(baseX - facing * 14, 30, 0), COL_DARK, Enum.Material.DiamondPlate, base, true).Transparency =
-		0.3
+	local generatorRoom = slab(
+		"GeneratorRoom",
+		Vector3.new(22, 12, 28),
+		CFrame.new(baseX - facing * 14, 30, 0),
+		COL_DARK,
+		Enum.Material.Glass,
+		base,
+		false
+	)
+	generatorRoom.Transparency = 0.72
+	generatorRoom.CanQuery = false
+
+	local generator = slab(
+		"PowerGenerator",
+		Vector3.new(7, 7, 7),
+		CFrame.new(baseX - facing * 14, 29, 0),
+		setup.col,
+		Enum.Material.Neon,
+		base,
+		true
+	)
+	generator.Shape = Enum.PartType.Ball
+	generator:SetAttribute("Team", setup.teamName)
+	CollectionService:AddTag(generator, "PowerGenerator")
+	local generatorLight = Instance.new("PointLight")
+	generatorLight.Color = setup.col
+	generatorLight.Brightness = 2.4
+	generatorLight.Range = 28
+	generatorLight.Shadows = true
+	generatorLight.Parent = generator
+
+	local inventoryStation = slab(
+		"InventoryStation",
+		Vector3.new(5, 6, 3),
+		CFrame.new(baseX - facing * 7, 27, 27),
+		setup.col,
+		Enum.Material.Neon,
+		base,
+		true
+	)
+	inventoryStation:SetAttribute("Team", setup.teamName)
+	CollectionService:AddTag(inventoryStation, "InventoryStation")
+
+	local turret = slab(
+		"BaseTurret",
+		Vector3.new(2.4, 2.4, 6),
+		CFrame.new(baseX + facing * 4, 49, 0),
+		setup.col,
+		Enum.Material.Metal,
+		base,
+		false
+	)
+	turret:SetAttribute("Team", setup.teamName)
+	CollectionService:AddTag(turret, "BaseTurret")
+
+	for _, railZ in { -38, 38 } do
+		local rail = slab(
+			"EnergyRail",
+			Vector3.new(42, 0.55, 0.55),
+			CFrame.new(baseX + facing * 9, 25.1, railZ),
+			setup.col,
+			Enum.Material.Neon,
+			base,
+			false
+		)
+		rail.CanQuery = false
+	end
+
+	local identityPanel = slab(
+		"TeamIdentityPanel",
+		Vector3.new(0.5, 9, 34),
+		CFrame.new(baseX - facing * 30.7, 37, 0),
+		setup.col,
+		Enum.Material.Neon,
+		base,
+		false
+	)
+	identityPanel.CanQuery = false
+	local identity = Instance.new("BillboardGui")
+	identity.Name = "TeamIdentity"
+	identity.Size = UDim2.fromOffset(260, 64)
+	identity.StudsOffset = Vector3.new(facing * 1.5, 0, 0)
+	identity.AlwaysOnTop = false
+	identity.MaxDistance = 220
+	identity.Parent = identityPanel
+	local identityText = Instance.new("TextLabel")
+	identityText.BackgroundTransparency = 1
+	identityText.Size = UDim2.fromScale(1, 1)
+	identityText.Font = Enum.Font.GothamBlack
+	identityText.Text = string.upper(setup.teamName .. " // TRIBAL BASE")
+	identityText.TextColor3 = Color3.fromRGB(240, 247, 255)
+	identityText.TextScaled = true
+	identityText.TextStrokeTransparency = 0.35
+	identityText.Parent = identity
 
 	-- Flaggen-Stand: vorne am Plattformrand zur Mitte, direkt über dem Kopf der
 	-- Grab-Rampe -> schneller Capper fährt sie hoch und grabbt im Vorbeiflug
@@ -185,5 +386,47 @@ for _, setup in baseSetups do
 		CollectionService:AddTag(spawnTag, "PlayerSpawn")
 	end
 end
+
+-- ============================================================
+-- 6. DEZENTER HOEHENSCHNEE
+-- Ein einzelner Emitter ist deutlich guenstiger als viele lokale Systeme.
+-- ============================================================
+local snowVolume = slab(
+	"SnowVolume",
+	Vector3.new(650, 1, 250),
+	CFrame.new(0, 112, 0),
+	Color3.new(1, 1, 1),
+	Enum.Material.SmoothPlastic,
+	map,
+	false
+)
+snowVolume.Transparency = 1
+snowVolume.CanQuery = false
+snowVolume.CastShadow = false
+
+local snow = Instance.new("ParticleEmitter")
+snow.Name = "AlpineSnow"
+snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+snow.Rate = 55
+snow.Lifetime = NumberRange.new(7, 10)
+snow.Speed = NumberRange.new(1, 3)
+snow.Acceleration = Vector3.new(2, -4.5, 0)
+snow.Drag = 0.35
+snow.EmissionDirection = Enum.NormalId.Bottom
+snow.SpreadAngle = Vector2.new(180, 180)
+snow.Rotation = NumberRange.new(0, 360)
+snow.RotSpeed = NumberRange.new(-35, 35)
+snow.LightEmission = 0.42
+snow.Size = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0.09),
+	NumberSequenceKeypoint.new(0.5, 0.16),
+	NumberSequenceKeypoint.new(1, 0.04),
+})
+snow.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0.35),
+	NumberSequenceKeypoint.new(0.8, 0.5),
+	NumberSequenceKeypoint.new(1, 1),
+})
+snow.Parent = snowVolume
 
 print("[MapBuilder] TribesMapLive gebaut - Gravity=0, durchgehende Ski-Fläche, 2 Sprungschanzen, Grab-Routen")
