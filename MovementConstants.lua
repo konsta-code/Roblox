@@ -28,6 +28,12 @@ Constants.SKI_MAX_CONTROL_PCT = 0.65
 Constants.SKI_STEER_RESPONSE = 4
 Constants.SKI_ACCEL_CAP_SPEED = 1700 / Constants.UU_PER_STUD
 Constants.SKI_ACCEL_PCT = 0.4
+-- Absprung-Schwelle: trägt die Velocity den Skifahrer über einer konvexen
+-- Kuppe (Kamm/Rampen-Lippe) mit mehr als diesem Wert (Studs/s) von der Fläche
+-- WEG, wird er in die Luft entlassen statt an den Boden gesnappt. Klein genug,
+-- dass echte Kämme/Schanzen mit Speed sicher abheben, groß genug, dass sanfte
+-- Bodenwellen beim normalen Skiing nicht ungewollt Sprünge auslösen.
+Constants.SKI_LAUNCH_THRESHOLD = 6
 
 -- Air control (AirSpeed 550 * AirControl 0.2).
 Constants.AIR_CONTROL_ACCELERATION = (550 * 0.2) / Constants.UU_PER_STUD

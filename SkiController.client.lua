@@ -286,6 +286,19 @@ RunService.Heartbeat:Connect(function(dt)
 
 	updateMoveVector()
 	local grounded, normal = checkGround()
+
+	-- Kamm-/Schanzen-Absprung: fahren wir skiend über eine konvexe Kuppe
+	-- (Bergkamm, Rampen-Lippe), trägt uns das Momentum von der Fläche WEG -
+	-- die Geschwindigkeit zeigt dann entlang der +Normalen (velocity·normal
+	-- positiv). In dem Fall NICHT zurück an die Fläche snappen (was die
+	-- Aufwärts-Geschwindigkeit in Abwärts umbiegen würde -> man klebt am Boden
+	-- und rutscht nur runter), sondern das Momentum in einen echten Sprung
+	-- übergehen lassen. Beim Landen zeigt die Velocity in die Fläche hinein
+	-- (negativ), dann greift das hier nicht und man skiet normal weiter.
+	if grounded and State.velocity:Dot(normal) > Constants.SKI_LAUNCH_THRESHOLD then
+		grounded = false
+	end
+
 	local justLanded = grounded and not State.wasGrounded
 	State.isGrounded = grounded
 	State.groundNormal = normal
