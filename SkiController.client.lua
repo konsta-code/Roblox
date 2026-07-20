@@ -38,6 +38,8 @@ local Input = {
 local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 
+local debugAccumulator = 0 -- TEMPORÄR: Drossel für die MoveDBG-Diagnosezeile
+
 local function horizontal(vector: Vector3): Vector3
 	return Vector3.new(vector.X, 0, vector.Z)
 end
@@ -63,6 +65,13 @@ local function setupCharacter(newCharacter: Model)
 	humanoid.AutoRotate = false
 	humanoid.UseJumpPower = false
 	humanoid.JumpHeight = 0
+	-- PlatformStand: der Humanoid gibt seine eigene Boden-Physik komplett ab
+	-- (kein aktives Abbremsen bei WalkSpeed 0, keine HipHeight-Beinfeder die
+	-- gegen den Jetpack zieht). Ohne das frisst der Humanoid die per
+	-- AssemblyLinearVelocity gesetzte Geschwindigkeit jeden Frame wieder auf -
+	-- Ursache für "kaum laufen" + "Jetpack hebt nicht ab". Orientierung hält
+	-- updateFacing() jeden Frame aufrecht, der Character kippt also nicht.
+	humanoid.PlatformStand = true
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
 	groundParams.FilterDescendantsInstances = { character }
@@ -285,8 +294,12 @@ RunService.Heartbeat:Connect(function(dt)
 
 	-- Adopt engine/server changes such as collisions and knockback, while
 	-- preserving the final airborne velocity for the landing projection.
+	-- Schwelle bewusst hoch (8): nur echte externe Eingriffe (Wand-Kollision)
+	-- übernehmen, NICHT das kleinbetragige Physik-Rauschen jeden Frame - sonst
+	-- adoptiert der Controller seine eigene abgebremste Velocity und bremst
+	-- sich selbst aus. Disc-Jumps kommen ohnehin explizit über MovementImpulse.
 	local actualVelocity = rootPart.AssemblyLinearVelocity
-	if not justLanded and (actualVelocity - State.velocity).Magnitude > 0.5 then
+	if not justLanded and (actualVelocity - State.velocity).Magnitude > 8 then
 		State.velocity = actualVelocity
 	end
 	local isJetpacking = updateJetpack(dt)
@@ -302,4 +315,15 @@ RunService.Heartbeat:Connect(function(dt)
 	State.wasGrounded = grounded
 	updateFacing()
 	rootPart.AssemblyLinearVelocity = State.velocity
+
+	-- TEMPORÄR: Diagnose einmal pro Sekunde. Wenn Bewegung/Jetpack noch klemmt,
+	-- verrät diese Zeile in der Ausgabe sofort die Ursache. Danach entfernen.
+	debugAccumulator += dt
+	if debugAccumulator >= 1 then
+		debugAccumulator = 0
+		print(string.format(
+			"[MoveDBG] grounded=%s jet=%s speed=%.1f energy=%.0f",
+			tostring(grounded), tostring(isJetpacking), State.velocity.Magnitude, State.jetpackEnergy
+		))
+	end
 end)
