@@ -44,7 +44,8 @@
         "SkiController": { "$path": "SkiController.client.lua" },
         "HudController": { "$path": "HudController.client.lua" },
         "Chaingun": { "$path": "Chaingun.client.lua" },
-        "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" }
+        "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" },
+        "WeaponViewmodel": { "$path": "WeaponViewmodel.client.lua" }
       }
     },
     "Teams": {
