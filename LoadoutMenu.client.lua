@@ -204,27 +204,31 @@ inventoryEvent.OnClientEvent:Connect(function(success: boolean, message: string)
 	end
 end)
 
--- Klassen-Menü automatisch öffnen, wenn eine Warmup-Phase beginnt (neue Runde)
--- und beim ersten Beitritt, falls gerade Warmup läuft. Robuster als ein
--- einmaliger 0.8s-Check: das MatchPhase-Attribut ist beim Laden evtl. noch
--- nicht repliziert oder die Phase schon weiter. Öffnet nie, wenn das Menü
--- bereits offen ist.
+-- Auto-Öffnen bei neuer Warmup-Runde (Attribut-Signal, falls Phase wechselt).
 local function autoOpenIfWarmup()
 	if not overlay.Visible and ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
 		setOpen(true)
 	end
 end
-
 ReplicatedStorage:GetAttributeChangedSignal("MatchPhase"):Connect(autoOpenIfWarmup)
 
--- Erst-Öffnen beim Beitritt: auf die (evtl. verzögerte) Replikation des
--- Attributs warten, dann öffnen, falls Warmup läuft.
-task.spawn(function()
-	for _ = 1, 25 do
-		if ReplicatedStorage:GetAttribute("MatchPhase") ~= nil then
-			break
-		end
-		task.wait(0.2)
+-- Erst-Öffnen DETERMINISTISCH am Charakter-Spawn - unabhängig von der
+-- Attribut-Replikation (das war die fragile Stelle). Feuert garantiert beim
+-- ersten eigenen Spawn; danach jederzeit mit L. Öffnet nie doppelt.
+local autoOpenedOnce = false
+local function autoOpenOnFirstSpawn()
+	if autoOpenedOnce then
+		return
 	end
-	autoOpenIfWarmup()
-end)
+	autoOpenedOnce = true
+	task.wait(0.6)
+	if not overlay.Visible then
+		setOpen(true)
+	end
+end
+player.CharacterAdded:Connect(autoOpenOnFirstSpawn)
+if player.Character then
+	task.spawn(autoOpenOnFirstSpawn)
+end
+
+print("[LoadoutMenu] bereit - Auto-Oeffnen am Spawn aktiv")
