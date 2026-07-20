@@ -1,9 +1,8 @@
 -- HudController.client.lua
 -- Ablageort: StarterPlayerScripts
 --
--- Baut das komplette HUD zur Laufzeit per Script (kein manuelles GUI-Bauen
--- in Studio nötig). Score + Flaggen-Status kommen vom Server, Jetpack-
--- Energie von SkiController über PlayerHudState, Health direkt vom Humanoid.
+-- Baut das komplette HUD zur Laufzeit per Script.
+-- + Crosshair für präzises Zielen
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,12 +16,53 @@ local scoreEvent = ReplicatedStorage:WaitForChild("CTFScoreUpdate")
 local carryStatusEvent = ReplicatedStorage:WaitForChild("FlagCarryStatus")
 local matchStateEvent = ReplicatedStorage:WaitForChild("MatchStateChanged")
 
--- === GUI-Aufbau ===
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MatchHud"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- === CROSSHAIR ===
+
+local crosshairFrame = Instance.new("Frame")
+crosshairFrame.Name = "Crosshair"
+crosshairFrame.Size = UDim2.fromOffset(28, 28)
+crosshairFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+crosshairFrame.Position = UDim2.fromScale(0.5, 0.5)
+crosshairFrame.BackgroundTransparency = 1
+crosshairFrame.Parent = screenGui
+
+local hBar = Instance.new("Frame")
+hBar.Size = UDim2.fromOffset(18, 2)
+hBar.AnchorPoint = Vector2.new(0.5, 0.5)
+hBar.Position = UDim2.fromScale(0.5, 0.5)
+hBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+hBar.BackgroundTransparency = 0.15
+hBar.BorderSizePixel = 0
+hBar.Parent = crosshairFrame
+
+local vBar = Instance.new("Frame")
+vBar.Size = UDim2.fromOffset(2, 18)
+vBar.AnchorPoint = Vector2.new(0.5, 0.5)
+vBar.Position = UDim2.fromScale(0.5, 0.5)
+vBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+vBar.BackgroundTransparency = 0.15
+vBar.BorderSizePixel = 0
+vBar.Parent = crosshairFrame
+
+local centerDot = Instance.new("Frame")
+centerDot.Size = UDim2.fromOffset(3, 3)
+centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+centerDot.Position = UDim2.fromScale(0.5, 0.5)
+centerDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+centerDot.BorderSizePixel = 0
+centerDot.Parent = crosshairFrame
+
+local centerCorner = Instance.new("UICorner")
+centerCorner.CornerRadius = UDim.new(1, 0)
+centerCorner.Parent = centerDot
+
+-- === Health / Jetpack Bars ===
 
 local function makeBar(anchorPoint: Vector2, position: UDim2, fillColor: Color3): (Frame, TextLabel)
 	local container = Instance.new("Frame")
@@ -72,23 +112,13 @@ local function makeBar(anchorPoint: Vector2, position: UDim2, fillColor: Color3)
 	return fill, label
 end
 
--- Health (unten links)
-local healthFill, healthLabel = makeBar(
-	Vector2.new(0, 1),
-	UDim2.new(0, 24, 1, -24),
-	Color3.fromRGB(220, 70, 70)
-)
+local healthFill, healthLabel = makeBar(Vector2.new(0, 1), UDim2.new(0, 24, 1, -24), Color3.fromRGB(220, 70, 70))
 healthLabel.Text = "HEALTH"
 
--- Jetpack (unten rechts)
-local jetpackFill, jetpackLabel = makeBar(
-	Vector2.new(1, 1),
-	UDim2.new(1, -24, 1, -24),
-	Color3.fromRGB(70, 170, 220)
-)
+local jetpackFill, jetpackLabel = makeBar(Vector2.new(1, 1), UDim2.new(1, -24, 1, -24), Color3.fromRGB(70, 170, 220))
 jetpackLabel.Text = "JETPACK"
 
--- === Score (oben mittig) ===
+-- === Score ===
 
 local scoreFrame = Instance.new("Frame")
 scoreFrame.Size = UDim2.fromOffset(260, 64)
@@ -109,7 +139,7 @@ scoreLabel.BackgroundTransparency = 1
 scoreLabel.Font = Enum.Font.GothamBold
 scoreLabel.TextSize = 20
 scoreLabel.TextColor3 = Color3.fromRGB(235, 235, 240)
-scoreLabel.Text = "0  —  0"
+scoreLabel.Text = "0  --  0"
 scoreLabel.Parent = scoreFrame
 
 local phaseLabel = Instance.new("TextLabel")
@@ -119,10 +149,8 @@ phaseLabel.BackgroundTransparency = 1
 phaseLabel.Font = Enum.Font.Gotham
 phaseLabel.TextSize = 13
 phaseLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-phaseLabel.Text = "Aufwärmphase"
+phaseLabel.Text = "Aufwaermphase"
 phaseLabel.Parent = scoreFrame
-
--- === Flag-Carry-Banner (nur sichtbar wenn aktiv) ===
 
 local carryBanner = Instance.new("TextLabel")
 carryBanner.Size = UDim2.fromOffset(320, 34)
@@ -133,15 +161,13 @@ carryBanner.BorderSizePixel = 0
 carryBanner.Font = Enum.Font.GothamBold
 carryBanner.TextSize = 16
 carryBanner.TextColor3 = Color3.fromRGB(20, 20, 20)
-carryBanner.Text = "DU TRÄGST DIE FLAGGE"
+carryBanner.Text = "DU TRAEGST DIE FLAGGE"
 carryBanner.Visible = false
 carryBanner.Parent = screenGui
 
 local carryCorner = Instance.new("UICorner")
 carryCorner.CornerRadius = UDim.new(0, 8)
 carryCorner.Parent = carryBanner
-
--- === Winner-Overlay (nur sichtbar in PostMatch) ===
 
 local winnerOverlay = Instance.new("TextLabel")
 winnerOverlay.Size = UDim2.fromOffset(500, 80)
@@ -170,10 +196,10 @@ local function refreshScoreLabel()
 	for name in scores do
 		table.insert(names, name)
 	end
-	table.sort(names) -- einfache stabile Reihenfolge; bei Bedarf hart auf Team-Reihenfolge umstellen
+	table.sort(names)
 
 	if #names >= 2 then
-		scoreLabel.Text = string.format("%s %d  —  %d %s", names[1], scores[names[1]], scores[names[2]], names[2])
+		scoreLabel.Text = string.format("%s %d  --  %d %s", names[1], scores[names[1]], scores[names[2]], names[2])
 	elseif #names == 1 then
 		scoreLabel.Text = string.format("%s %d", names[1], scores[names[1]])
 	end
@@ -195,13 +221,13 @@ local function formatTime(seconds: number): string
 end
 
 local PHASE_LABELS = {
-	Warmup = "Aufwärmphase",
+	Warmup = "Aufwaermphase",
 	InProgress = "Laufende Runde",
 	PostMatch = "Rundenende",
 }
 
 matchStateEvent.OnClientEvent:Connect(function(phase: string, timeRemaining: number, winnerName: string?)
-	phaseLabel.Text = string.format("%s · %s", PHASE_LABELS[phase] or phase, formatTime(timeRemaining))
+	phaseLabel.Text = string.format("%s - %s", PHASE_LABELS[phase] or phase, formatTime(timeRemaining))
 
 	if phase == "PostMatch" and winnerName then
 		winnerOverlay.Text = winnerName == "Unentschieden" and "UNENTSCHIEDEN" or (winnerName .. " GEWINNT")
