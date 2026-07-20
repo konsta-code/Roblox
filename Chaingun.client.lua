@@ -65,7 +65,7 @@ local function fireOnce()
 	end
 
 	drawTracer(origin, endPoint)
-	fireEvent:FireServer(origin, direction, claimedTarget)
+	fireEvent:FireServer(direction, claimedTarget)
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)

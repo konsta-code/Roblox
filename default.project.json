@@ -3,6 +3,12 @@
   "tree": {
     "$className": "DataModel",
 
+    "Workspace": {
+      "$properties": {
+        "Gravity": 0
+      }
+    },
+
     "ReplicatedStorage": {
       "Modules": {
         "$className": "Folder",
@@ -18,6 +24,7 @@
       },
       "FireWeapon": { "$className": "RemoteEvent" },
       "FireChaingun": { "$className": "RemoteEvent" },
+      "MovementImpulse": { "$className": "RemoteEvent" },
       "CTFScoreUpdate": { "$className": "RemoteEvent" },
       "FlagCarryStatus": { "$className": "RemoteEvent" },
       "MatchStateChanged": { "$className": "RemoteEvent" }
@@ -29,7 +36,8 @@
       "SpawnManager": { "$path": "SpawnManager.server.lua" },
       "TeamAssignment": { "$path": "TeamAssignment.server.lua" },
       "Chaingun": { "$path": "Chaingun.server.lua" },
-      "ProjectileWeapon": { "$path": "ProjectileWeapon.server.lua" }
+      "ProjectileWeapon": { "$path": "ProjectileWeapon.server.lua" },
+      "MovementGuard": { "$path": "MovementGuard.server.lua" }
     },
 
     "StarterPlayer": {

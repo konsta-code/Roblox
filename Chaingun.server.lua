@@ -37,6 +37,7 @@ local function getCurrentHeat(player: Player, now: number): number
 end
 
 local function validateAndApplyDamage(shooter: Player, origin: Vector3, direction: Vector3, claimedTarget: Player)
+	if claimedTarget.Team == shooter.Team then return end
 	local targetCharacter = claimedTarget.Character
 	local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
 	if not targetHumanoid or targetHumanoid.Health <= 0 then return end
@@ -54,14 +55,21 @@ local function validateAndApplyDamage(shooter: Player, origin: Vector3, directio
 	targetHumanoid:TakeDamage(Constants.DAMAGE_PER_HIT)
 end
 
-local function tryFire(player: Player, origin: Vector3, direction: Vector3, claimedTarget: Player?)
+local function isFiniteVector(value: any): boolean
+	return typeof(value) == "Vector3"
+		and value.X == value.X and value.Y == value.Y and value.Z == value.Z
+		and math.abs(value.X) < 1e6 and math.abs(value.Y) < 1e6 and math.abs(value.Z) < 1e6
+end
+
+local function tryFire(player: Player, direction: any, claimedTarget: any)
 	local now = os.clock()
 
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if root and (root.Position - origin).Magnitude > 10 then
-		return
-	end
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not root:IsA("BasePart") or not humanoid or humanoid.Health <= 0 then return end
+	if not isFiniteVector(direction) or direction.Magnitude < 0.5 then return end
+	local origin = root.Position + direction.Unit * 2
 
 	if (overheatUntil[player] or 0) > now then
 		return -- Waffe überhitzt, Server ignoriert jeden Feuerversuch
@@ -89,13 +97,13 @@ local function tryFire(player: Player, origin: Vector3, direction: Vector3, clai
 	heat[player] = newHeat
 	lastHeatUpdateTime[player] = now
 
-	if claimedTarget then
+	if typeof(claimedTarget) == "Instance" and claimedTarget:IsA("Player") then
 		validateAndApplyDamage(player, origin, direction, claimedTarget)
 	end
 end
 
-fireEvent.OnServerEvent:Connect(function(player: Player, origin: Vector3, direction: Vector3, claimedTarget: Player?)
-	tryFire(player, origin, direction, claimedTarget)
+fireEvent.OnServerEvent:Connect(function(player: Player, direction: any, claimedTarget: any)
+	tryFire(player, direction, claimedTarget)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
