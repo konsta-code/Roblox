@@ -5,7 +5,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage.Modules.LoadoutConstants)
-local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
 
 local selectEvent = ReplicatedStorage:WaitForChild("SelectLoadout")
 local lastChange: { [Player]: number } = {}
@@ -48,19 +47,6 @@ local function applyLoadout(player: Player, character: Model)
 	humanoid.Health = definition.maxHealth
 end
 
-local function canChangeNow(player: Player): boolean
-	local inventoryAccess = player:GetAttribute("InventoryAccessUntil")
-	if typeof(inventoryAccess) == "number" and inventoryAccess >= os.clock() then
-		return true
-	end
-	if MatchSignals.GetPhase() ~= "InProgress" then
-		return true
-	end
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	return humanoid == nil or humanoid.Health <= 0 or character:FindFirstChildOfClass("ForceField") ~= nil
-end
-
 local function setupPlayer(player: Player)
 	if not Constants.LOADOUTS[player:GetAttribute("Loadout")] then
 		player:SetAttribute("Loadout", Constants.DEFAULT_LOADOUT)
@@ -89,22 +75,12 @@ selectEvent.OnServerEvent:Connect(function(player: Player, requestedLoadout: any
 		return
 	end
 	lastChange[player] = now
-	-- Auswahl IMMER merken - sie gilt spätestens beim nächsten Spawn. applyLoadout
-	-- wendet das Loadout-Attribut bei jedem CharacterAdded an, also auch beim
-	-- nächsten natürlichen Respawn nach dem Tod.
+	-- Auswahl NUR merken - sie greift ausschließlich beim nächsten Spawn nach dem
+	-- Tod. KEIN sofortiger Respawn (bewusster Nutzer-Wunsch: immer erst beim
+	-- nächsten Tod). applyLoadout wendet das Loadout-Attribut bei jedem
+	-- CharacterAdded an, also automatisch beim nächsten natürlichen Respawn.
 	player:SetAttribute("Loadout", loadoutId)
-
-	if canChangeNow(player) then
-		-- Warmup / tot / Inventar-Station / ForceField: sofort anwenden + neu spawnen.
-		applyPlayerAttributes(player, definition)
-		selectEvent:FireClient(player, true, definition.displayName .. " ausgewählt")
-		player:LoadCharacter()
-	else
-		-- Mitten im aktiven Leben: KEIN Instant-Klassenwechsel im Kampf, aber die
-		-- Wahl greift beim nächsten Tod/Respawn (vorher wurde sie hier komplett
-		-- verworfen - Ursache für "Klasse ändert sich nicht nach dem Tod").
-		selectEvent:FireClient(player, true, definition.displayName .. " - aktiv ab nächstem Spawn")
-	end
+	selectEvent:FireClient(player, true, definition.displayName .. " - aktiv ab nächstem Tod")
 end)
 
 Players.PlayerAdded:Connect(setupPlayer)
