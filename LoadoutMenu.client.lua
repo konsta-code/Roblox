@@ -204,8 +204,27 @@ inventoryEvent.OnClientEvent:Connect(function(success: boolean, message: string)
 	end
 end)
 
-task.delay(0.8, function()
-	if ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
+-- Klassen-Menü automatisch öffnen, wenn eine Warmup-Phase beginnt (neue Runde)
+-- und beim ersten Beitritt, falls gerade Warmup läuft. Robuster als ein
+-- einmaliger 0.8s-Check: das MatchPhase-Attribut ist beim Laden evtl. noch
+-- nicht repliziert oder die Phase schon weiter. Öffnet nie, wenn das Menü
+-- bereits offen ist.
+local function autoOpenIfWarmup()
+	if not overlay.Visible and ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
 		setOpen(true)
 	end
+end
+
+ReplicatedStorage:GetAttributeChangedSignal("MatchPhase"):Connect(autoOpenIfWarmup)
+
+-- Erst-Öffnen beim Beitritt: auf die (evtl. verzögerte) Replikation des
+-- Attributs warten, dann öffnen, falls Warmup läuft.
+task.spawn(function()
+	for _ = 1, 25 do
+		if ReplicatedStorage:GetAttribute("MatchPhase") ~= nil then
+			break
+		end
+		task.wait(0.2)
+	end
+	autoOpenIfWarmup()
 end)
