@@ -38,8 +38,6 @@ local Input = {
 local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local debugAccumulator = 0 -- TEMPORÄR: Drossel für die MoveDBG-Diagnosezeile
-
 local function horizontal(vector: Vector3): Vector3
 	return Vector3.new(vector.X, 0, vector.Z)
 end
@@ -315,15 +313,4 @@ RunService.Heartbeat:Connect(function(dt)
 	State.wasGrounded = grounded
 	updateFacing()
 	rootPart.AssemblyLinearVelocity = State.velocity
-
-	-- TEMPORÄR: Diagnose einmal pro Sekunde. Wenn Bewegung/Jetpack noch klemmt,
-	-- verrät diese Zeile in der Ausgabe sofort die Ursache. Danach entfernen.
-	debugAccumulator += dt
-	if debugAccumulator >= 1 then
-		debugAccumulator = 0
-		print(string.format(
-			"[MoveDBG] grounded=%s jet=%s speed=%.1f energy=%.0f",
-			tostring(grounded), tostring(isJetpacking), State.velocity.Magnitude, State.jetpackEnergy
-		))
-	end
 end)
