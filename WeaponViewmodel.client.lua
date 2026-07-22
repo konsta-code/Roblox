@@ -13,7 +13,8 @@ local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 
 local player = Players.LocalPlayer
 local VIEWMODEL_SCALE = 0.72
-local IMPORTED_SPINFUSOR_LENGTH = 3.45
+local IMPORTED_SPINFUSOR_LENGTH = 2.85
+local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.58, -0.3, 0.15)
 
 type WeaponTheme = {
 	armor: Color3,
@@ -241,7 +242,7 @@ local function createImportedSpinfusor(): ViewModel?
 		return nil
 	end
 	imported:ScaleTo(IMPORTED_SPINFUSOR_LENGTH / longestAxis)
-	imported:PivotTo(root.CFrame * CFrame.new(0, 0.08, 0.15))
+	imported:PivotTo(root.CFrame * IMPORTED_SPINFUSOR_OFFSET)
 
 	local parts = {}
 	for _, descendant in imported:GetDescendants() do
