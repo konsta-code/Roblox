@@ -2,3 +2,7 @@
 *.rbxlx
 Thumbs.db
 .DS_Store
+
+# Blender auto-backups
+*.blend1
+*.blend2
