@@ -7,9 +7,10 @@ fallbacks as soon as the Blender FBX assets are imported into the place.
 
 1. In Studio, stop the playtest and open **3D Importer**.
 2. Select all 27 FBX files from `art_source/weapons/arsenal_v01/export/`.
-3. Keep the FBX filenames as the imported model names and import all files.
-4. Move the resulting models into `ReplicatedStorage/WeaponAssets`.
-5. Connect Rojo again and start **Play**. Switching class at an inventory
+3. Keep the FBX filenames as the imported model names, leave **Add to
+   Workspace** enabled and import all files.
+4. Start **Play**. `ImportedAssetOrganizer` automatically moves recognized
+   models into `ReplicatedStorage/WeaponAssets`. Switching class at an inventory
    station now rebuilds both first-person weapons immediately.
 
 The runtime recursively searches `WeaponAssets`, so optional class subfolders

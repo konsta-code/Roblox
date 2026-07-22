@@ -12,6 +12,13 @@ local WeaponState = require(ReplicatedStorage.Modules.WeaponState)
 local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 
 local player = Players.LocalPlayer
+
+-- Give the server-side Studio import organizer a moment to move freshly
+-- imported FBX models out of Workspace before viewmodels are discovered.
+local importDeadline = os.clock() + 3
+while ReplicatedStorage:GetAttribute("ImportedWeaponsResolved") ~= true and os.clock() < importDeadline do
+	task.wait(0.05)
+end
 local VIEWMODEL_SCALE = 0.72
 local IMPORTED_WEAPON_LENGTH = {
 	Spinfusor = 2.5,

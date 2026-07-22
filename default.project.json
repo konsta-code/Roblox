@@ -14,6 +14,10 @@
         "$className": "Folder",
         "$ignoreUnknownInstances": true
       },
+      "WeaponAssets": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
+      },
       "Modules": {
         "$className": "Folder",
         "CTFSignals": { "$path": "CTFSignals.lua" },
@@ -68,6 +72,7 @@
       "WorldEnvironment": { "$path": "WorldEnvironment.server.lua" },
       "PlayerData": { "$path": "PlayerData.server.lua" },
       "CharacterPresentation": { "$path": "CharacterPresentation.server.lua" },
+      "ImportedAssetOrganizer": { "$path": "ImportedAssetOrganizer.server.lua" },
       "BotManager": { "$path": "BotManager.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" },
       "ImportedMapLoader": { "$path": "ImportedMapLoader.server.lua" },
