@@ -13,8 +13,8 @@ local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 
 local player = Players.LocalPlayer
 local VIEWMODEL_SCALE = 0.72
-local IMPORTED_SPINFUSOR_LENGTH = 2.85
-local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.58, -0.3, 0.15)
+local IMPORTED_SPINFUSOR_LENGTH = 2.5
+local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.58, -0.52, 0.15)
 
 type WeaponTheme = {
 	armor: Color3,
