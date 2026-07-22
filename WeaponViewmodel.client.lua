@@ -15,6 +15,8 @@ local player = Players.LocalPlayer
 local VIEWMODEL_SCALE = 0.72
 local IMPORTED_SPINFUSOR_LENGTH = 2.5
 local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.58, -0.52, 0.15)
+local SPINFUSOR_COLOR_MAP = "rbxassetid://88661755368381"
+local SPINFUSOR_NORMAL_MAP = "rbxassetid://99243358537851"
 
 type WeaponTheme = {
 	armor: Color3,
@@ -254,8 +256,20 @@ local function createImportedSpinfusor(): ViewModel?
 			descendant.CanQuery = false
 			descendant.CastShadow = false
 			descendant.Massless = true
-			descendant:SetAttribute("FinishRole", "Armor")
+			descendant.Color = Color3.new(1, 1, 1)
+			descendant:SetAttribute("FinishRole", "ImportedMesh")
 			table.insert(parts, descendant)
+
+			if descendant:IsA("MeshPart") then
+				local surface = descendant:FindFirstChildOfClass("SurfaceAppearance")
+				if not surface then
+					surface = Instance.new("SurfaceAppearance")
+					surface.Name = "SpinfusorSurface"
+					surface.Parent = descendant
+				end
+				surface.ColorMap = SPINFUSOR_COLOR_MAP
+				surface.NormalMap = SPINFUSOR_NORMAL_MAP
+			end
 
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = root
