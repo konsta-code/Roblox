@@ -10,6 +10,10 @@
     },
 
     "ReplicatedStorage": {
+      "MapAssets": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
+      },
       "Modules": {
         "$className": "Folder",
         "CTFSignals": { "$path": "CTFSignals.lua" },
@@ -66,6 +70,7 @@
       "CharacterPresentation": { "$path": "CharacterPresentation.server.lua" },
       "BotManager": { "$path": "BotManager.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" },
+      "ImportedMapLoader": { "$path": "ImportedMapLoader.server.lua" },
       "MapArt": { "$path": "MapArt.server.lua" }
     },
     "StarterPlayer": {

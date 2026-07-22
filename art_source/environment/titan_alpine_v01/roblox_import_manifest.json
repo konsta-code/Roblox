@@ -1,0 +1,127 @@
+{
+  "pack": "TitanAlpine_v2",
+  "studs_per_blender_meter": 20,
+  "gameplay_collision_source": "MapBuilder.server.lua",
+  "modules": [
+    {
+      "model_name": "Titan_CoreRoute",
+      "source_fbx": "export/Titan_CoreRoute.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        0,
+        0,
+        0
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_NorthFlank",
+      "source_fbx": "export/Titan_NorthFlank.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        0,
+        20,
+        -250
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_SouthFlank",
+      "source_fbx": "export/Titan_SouthFlank.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        0,
+        20,
+        250
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_RedCitadel",
+      "source_fbx": "export/Titan_RedCitadel.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        -570,
+        24,
+        0
+      ],
+      "collision_fidelity": "Hull",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_BlueCitadel",
+      "source_fbx": "export/Titan_BlueCitadel.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        570,
+        24,
+        0
+      ],
+      "collision_fidelity": "Hull",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_WestGlacierVault",
+      "source_fbx": "export/Titan_WestGlacierVault.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        -255,
+        2,
+        -250
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_EastGlacierVault",
+      "source_fbx": "export/Titan_EastGlacierVault.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        255,
+        2,
+        250
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": true
+    },
+    {
+      "model_name": "Titan_CanyonBackdrop",
+      "source_fbx": "export/Titan_CanyonBackdrop.fbx",
+      "workspace_parent": "Workspace/ImportedMap/TitanAlpine",
+      "pivot_cframe": [
+        0,
+        0,
+        0
+      ],
+      "collision_fidelity": "Box",
+      "double_sided": false,
+      "anchored": true,
+      "can_collide": false,
+      "cast_shadow": false
+    }
+  ]
+}

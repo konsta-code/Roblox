@@ -4,6 +4,17 @@
 
 local Lighting = game:GetService("Lighting")
 
+-- Imported Blender modules win over the native fallback. The loader resolves
+-- this attribute at startup; a short wait removes script start-order races.
+local resolutionDeadline = os.clock() + 3
+while workspace:GetAttribute("TitanImportedArtResolved") == nil and os.clock() < resolutionDeadline do
+	task.wait(0.05)
+end
+if workspace:GetAttribute("TitanImportedArtReady") == true then
+	print("[MapArt] Blender Titan modules active; native fallback skipped")
+	return
+end
+
 local map = workspace:WaitForChild("TribesMapLive", 15)
 if not map then return end
 

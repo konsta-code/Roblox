@@ -29,16 +29,26 @@ later without changing gameplay or hitboxes.
 ## Titan Alpine environment
 
 `environment/titan_alpine_v01/CTFGame_TitanAlpine_v01.blend` is the editable
-environment source for the mirrored CTF arena. It includes the core ski route,
-two flank lanes, highland rims, both bases, canyon silhouettes and navigation
-beacons. The complete FBX has 201 objects / 21,612 triangles at the same
-20-studs-per-meter scale used by the movement constants. The live game keeps
-using `MapBuilder.server.lua`, which produces collision-safe slopes and all
-gameplay tags automatically.
+environment source for the mirrored CTF arena. It includes seamless ski
+ribbons, two flank lanes, highland rims, both citadels, glacier vaults, the
+Titan reactor, canyon silhouettes and navigation beacons. The complete visual
+pack is also exported as eight Roblox-ready FBX modules with local origin
+markers and exact placement pivots in `roblox_import_manifest.json`.
+
+The live game keeps `MapBuilder.server.lua` as the collision and gameplay-tag
+source. `ImportedMapLoader.server.lua` automatically activates all eight
+Blender modules after they are imported under `ReplicatedStorage/MapAssets`;
+otherwise the native `MapArt.server.lua` fallback remains active.
 
 ## Rebuilding
 
-Both packs are deterministic Blender scripts and can be regenerated headless:
+All packs are deterministic Blender scripts. Rebuild everything with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\art_source\BUILD_ALL_BLENDER.ps1
+```
+
+Or run the generators individually:
 
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python .\art_source\weapons\arsenal_v01\build_arsenal.py

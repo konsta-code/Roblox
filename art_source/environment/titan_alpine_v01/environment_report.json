@@ -2,9 +2,100 @@
   "name": "TITAN ALPINE",
   "blend": "CTFGame_TitanAlpine_v01.blend",
   "fbx": "export/CTFGame_TitanAlpine_v01.fbx",
-  "objects": 201,
-  "triangles": 21612,
+  "objects": 241,
+  "triangles": 38820,
   "scale_roblox_studs_per_meter": 20,
+  "module_count": 8,
+  "modules": [
+    {
+      "name": "CoreRoute",
+      "fbx": "export/Titan_CoreRoute.fbx",
+      "objects": 17,
+      "triangles": 4056,
+      "pivot_studs": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "name": "NorthFlank",
+      "fbx": "export/Titan_NorthFlank.fbx",
+      "objects": 47,
+      "triangles": 6164,
+      "pivot_studs": {
+        "x": 0,
+        "y": 20,
+        "z": -250
+      }
+    },
+    {
+      "name": "SouthFlank",
+      "fbx": "export/Titan_SouthFlank.fbx",
+      "objects": 47,
+      "triangles": 6164,
+      "pivot_studs": {
+        "x": 0,
+        "y": 20,
+        "z": 250
+      }
+    },
+    {
+      "name": "RedCitadel",
+      "fbx": "export/Titan_RedCitadel.fbx",
+      "objects": 17,
+      "triangles": 2756,
+      "pivot_studs": {
+        "x": -570,
+        "y": 24,
+        "z": 0
+      }
+    },
+    {
+      "name": "BlueCitadel",
+      "fbx": "export/Titan_BlueCitadel.fbx",
+      "objects": 17,
+      "triangles": 2756,
+      "pivot_studs": {
+        "x": 570,
+        "y": 24,
+        "z": 0
+      }
+    },
+    {
+      "name": "WestGlacierVault",
+      "fbx": "export/Titan_WestGlacierVault.fbx",
+      "objects": 23,
+      "triangles": 4188,
+      "pivot_studs": {
+        "x": -255,
+        "y": 2,
+        "z": -250
+      }
+    },
+    {
+      "name": "EastGlacierVault",
+      "fbx": "export/Titan_EastGlacierVault.fbx",
+      "objects": 23,
+      "triangles": 4188,
+      "pivot_studs": {
+        "x": 255,
+        "y": 2,
+        "z": 250
+      }
+    },
+    {
+      "name": "CanyonBackdrop",
+      "fbx": "export/Titan_CanyonBackdrop.fbx",
+      "objects": 50,
+      "triangles": 8548,
+      "pivot_studs": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    }
+  ],
   "previews": [
     "previews/TitanAlpine_Aerial.png",
     "previews/TitanAlpine_CoreRoute.png",

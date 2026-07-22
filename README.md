@@ -89,6 +89,13 @@ sichtbare Roblox-Silhouette; importierte Klassenwaffen werden automatisch auch
 als Third-Person-Modelle verwendet. Speed-Streaks, Runden-Intros und
 mehrstufige Plasma-Einschläge bilden den Production-VFX-Pass.
 
+Der Blender-Pack enthält zusätzlich acht getrennte, pivot-sichere Karten-FBX.
+Nach dem Import unter `ReplicatedStorage/MapAssets` aktiviert
+`ImportedMapLoader.server.lua` automatisch die vollständige Mesh-Karte; die
+bewährte MapBuilder-Geometrie bleibt unsichtbare Gameplay-Kollision. Der
+gesamte Karten-, Arsenal- und Rüstungs-Pack lässt sich mit
+`art_source/BUILD_ALL_BLENDER.ps1` reproduzierbar neu bauen.
+
 ## Release-Prüfung
 
 ```powershell
