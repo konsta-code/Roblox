@@ -326,7 +326,7 @@ RunService.RenderStepped:Connect(function()
 	local kit = ClassKitConstants.Get(player:GetAttribute("Loadout"))
 	local weaponName = if selected == "Spinfusor" then kit.disc.name else kit.automatic.name
 
-	cooldownFrame.Visible = player:GetAttribute("LoadoutMenuOpen") ~= true
+	cooldownFrame.Visible = not ready and player:GetAttribute("LoadoutMenuOpen") ~= true
 	cooldownFill.Size = UDim2.fromScale(ratio, 1)
 	cooldownFill.BackgroundColor3 = if ready
 		then hudAccent
@@ -341,7 +341,9 @@ RunService.RenderStepped:Connect(function()
 	local heat, lockedUntil = WeaponState.GetAutomaticHeat()
 	local overheated = lockedUntil > os.clock()
 	local heatRatio = math.clamp(heat / 100, 0, 1)
-	heatFrame.Visible = selected == "Chaingun" and player:GetAttribute("LoadoutMenuOpen") ~= true
+	heatFrame.Visible = selected == "Chaingun"
+		and (heatRatio > 0.02 or overheated)
+		and player:GetAttribute("LoadoutMenuOpen") ~= true
 	heatFill.Size = UDim2.fromScale(heatRatio, 1)
 	heatFill.BackgroundColor3 = Color3.fromRGB(75, 200, 255):Lerp(Color3.fromRGB(255, 72, 45), heatRatio)
 	heatLabel.Text = if overheated then "OVERHEAT" else string.format("HEAT  %03d%%", math.floor(heat + 0.5))
@@ -357,6 +359,7 @@ RunService.RenderStepped:Connect(function()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local speed = if root and root:IsA("BasePart") then root.AssemblyLinearVelocity.Magnitude else 0
+	speedFrame.Visible = speed >= 55 and player:GetAttribute("LoadoutMenuOpen") ~= true
 	local speedRatio = math.clamp((speed - 30) / 150, 0, 1)
 	speedLabel.Text = string.format("VELOCITY // %03d", math.floor(speed + 0.5))
 	speedLabel.TextColor3 = hudAccent:Lerp(Color3.fromRGB(255, 178, 72), speedRatio)
@@ -368,7 +371,7 @@ end)
 local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fillColor: Color3): (Frame, TextLabel)
 	local container = Instance.new("Frame")
 	container.Name = name .. "Telemetry"
-	container.Size = UDim2.fromOffset(270, 62)
+	container.Size = UDim2.fromOffset(218, 42)
 	container.AnchorPoint = anchorPoint
 	container.Position = position
 	container.Parent = screenGui
@@ -382,6 +385,7 @@ local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fill
 	system.Text = hudFaction .. " // " .. name
 	system.TextSize = 9
 	system.TextXAlignment = Enum.TextXAlignment.Left
+	system.Visible = false
 	system.Parent = container
 	registerTheme(function()
 		system.Text = hudFaction .. " // " .. name
@@ -389,8 +393,8 @@ local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fill
 	end)
 
 	local track = Instance.new("Frame")
-	track.Size = UDim2.new(1, -18, 0, 13)
-	track.Position = UDim2.fromOffset(9, 40)
+	track.Size = UDim2.new(1, -16, 0, 8)
+	track.Position = UDim2.fromOffset(8, 28)
 	track.BackgroundColor3 = Color3.fromRGB(23, 31, 39)
 	track.BorderSizePixel = 0
 	track.ClipsDescendants = true
@@ -414,7 +418,7 @@ local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fill
 	for index = 1, 11 do
 		local divider = Instance.new("Frame")
 		divider.Name = "Segment" .. index
-		divider.Size = UDim2.fromOffset(1, 13)
+		divider.Size = UDim2.fromOffset(1, 8)
 		divider.Position = UDim2.new(index / 12, 0, 0, 0)
 		divider.BackgroundColor3 = hudPanel
 		divider.BackgroundTransparency = 0.18
@@ -425,11 +429,11 @@ local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fill
 	end
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -18, 0, 20)
-	label.Position = UDim2.fromOffset(9, 18)
+	label.Size = UDim2.new(1, -16, 0, 20)
+	label.Position = UDim2.fromOffset(8, 5)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBlack
-	label.TextSize = 15
+	label.TextSize = 12
 	label.TextColor3 = Color3.fromRGB(235, 242, 248)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = container
@@ -438,10 +442,10 @@ local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fill
 end
 
 local healthFill, healthLabel = makeBar("VITALS", Vector2.new(0, 1), UDim2.new(0, 24, 1, -24), Color3.fromRGB(234, 67, 62))
-healthLabel.Text = "VITAL INTEGRITY // 100"
+healthLabel.Text = "HP // 100"
 
 local jetpackFill, jetpackLabel = makeBar("THRUST", Vector2.new(1, 1), UDim2.new(1, -24, 1, -24), hudAccent)
-jetpackLabel.Text = "THRUST RESERVE // 100"
+jetpackLabel.Text = "JET // 100"
 registerTheme(function()
 	healthLabel.TextColor3 = hudBright
 	jetpackLabel.TextColor3 = hudBright
@@ -449,12 +453,11 @@ end)
 
 local equipmentLabel = Instance.new("TextLabel")
 equipmentLabel.Name = "CombatDock"
-equipmentLabel.Size = UDim2.fromOffset(660, 52)
+equipmentLabel.Size = UDim2.fromOffset(420, 28)
 equipmentLabel.AnchorPoint = Vector2.new(0.5, 1)
 equipmentLabel.Position = UDim2.new(0.5, 0, 1, -18)
 equipmentLabel.Font = Enum.Font.RobotoMono
-equipmentLabel.TextSize = 11
-equipmentLabel.TextWrapped = true
+equipmentLabel.TextSize = 10
 equipmentLabel.TextColor3 = Color3.fromRGB(225, 235, 243)
 equipmentLabel.Parent = screenGui
 addTitanShell(equipmentLabel, 0.14)
@@ -466,17 +469,13 @@ local function refreshEquipment()
 	local kit = ClassKitConstants.Get(player:GetAttribute("Loadout"))
 	local grenadeName = string.upper(kit.grenade.name)
 	local selected = WeaponState.Get()
-	local discMark = if selected == "Spinfusor" then "◆" else "◇"
-	local automaticMark = if selected == "Chaingun" then "◆" else "◇"
+	local weaponName = if selected == "Spinfusor" then kit.disc.name else kit.automatic.name
 	equipmentLabel.Text = string.format(
-		"%s [1] %s    //    %s [2] %s\n[G] %s ×%d    [F] MELEE    [V] PING%s",
-		discMark,
-		string.upper(kit.disc.name),
-		automaticMark,
-		string.upper(kit.automatic.name),
+		"%s  //  G: %s ×%d%s",
+		string.upper(weaponName),
 		grenadeName,
 		typeof(grenades) == "number" and grenades or 0,
-		if isCarryingFlag then "    [Z] FLAG PUNT" else ""
+		if isCarryingFlag then "  //  Z: FLAG PUNT" else ""
 	)
 end
 
@@ -489,7 +488,7 @@ refreshEquipment()
 
 local scoreFrame = Instance.new("Frame")
 scoreFrame.Name = "TitanScoreCore"
-scoreFrame.Size = UDim2.fromOffset(354, 82)
+scoreFrame.Size = UDim2.fromOffset(220, 48)
 scoreFrame.AnchorPoint = Vector2.new(0.5, 0)
 scoreFrame.Position = UDim2.new(0.5, 0, 0, 14)
 scoreFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -510,42 +509,43 @@ modeLabel.Font = Enum.Font.RobotoMono
 modeLabel.Text = "TITAN CORE // CAPTURE PROTOCOL"
 modeLabel.TextColor3 = Color3.fromRGB(128, 151, 171)
 modeLabel.TextSize = 9
+modeLabel.Visible = false
 modeLabel.Parent = scoreFrame
 
 local blueTeamTag = Instance.new("TextLabel")
-blueTeamTag.Size = UDim2.fromOffset(95, 20)
-blueTeamTag.Position = UDim2.fromOffset(12, 27)
+blueTeamTag.Size = UDim2.fromOffset(48, 18)
+blueTeamTag.Position = UDim2.fromOffset(8, 5)
 blueTeamTag.BackgroundTransparency = 1
 blueTeamTag.Font = Enum.Font.GothamBlack
-blueTeamTag.Text = "CRYO"
+blueTeamTag.Text = "B"
 blueTeamTag.TextColor3 = Color3.fromRGB(65, 214, 255)
 blueTeamTag.TextSize = 11
 blueTeamTag.TextXAlignment = Enum.TextXAlignment.Left
 blueTeamTag.Parent = scoreFrame
 
 local redTeamTag = blueTeamTag:Clone()
-redTeamTag.Position = UDim2.new(1, -107, 0, 27)
-redTeamTag.Text = "EMBER"
+redTeamTag.Position = UDim2.new(1, -56, 0, 5)
+redTeamTag.Text = "R"
 redTeamTag.TextColor3 = Color3.fromRGB(255, 86, 43)
 redTeamTag.TextXAlignment = Enum.TextXAlignment.Right
 redTeamTag.Parent = scoreFrame
 
 local scoreLabel = Instance.new("TextLabel")
-scoreLabel.Size = UDim2.new(1, 0, 0, 38)
-scoreLabel.Position = UDim2.fromOffset(0, 17)
+scoreLabel.Size = UDim2.new(1, 0, 0, 28)
+scoreLabel.Position = UDim2.fromOffset(0, 0)
 scoreLabel.BackgroundTransparency = 1
 scoreLabel.Font = Enum.Font.GothamBlack
-scoreLabel.TextSize = 24
+scoreLabel.TextSize = 19
 scoreLabel.TextColor3 = Color3.fromRGB(235, 235, 240)
 scoreLabel.Text = "0  --  0"
 scoreLabel.Parent = scoreFrame
 
 local phaseLabel = Instance.new("TextLabel")
-phaseLabel.Size = UDim2.new(1, -20, 0, 19)
-phaseLabel.Position = UDim2.fromOffset(10, 58)
+phaseLabel.Size = UDim2.new(1, -16, 0, 16)
+phaseLabel.Position = UDim2.fromOffset(8, 28)
 phaseLabel.BackgroundTransparency = 1
 phaseLabel.Font = Enum.Font.RobotoMono
-phaseLabel.TextSize = 10
+phaseLabel.TextSize = 8
 phaseLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
 phaseLabel.Text = "Aufwaermphase"
 phaseLabel.Parent = scoreFrame
@@ -752,9 +752,9 @@ end)
 
 local medalFrame = Instance.new("CanvasGroup")
 medalFrame.Name = "CombatMedal"
-medalFrame.Size = UDim2.fromOffset(300, 58)
+medalFrame.Size = UDim2.fromOffset(210, 34)
 medalFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-medalFrame.Position = UDim2.fromScale(0.5, 0.66)
+medalFrame.Position = UDim2.fromScale(0.5, 0.59)
 medalFrame.BackgroundColor3 = Color3.fromRGB(8, 14, 22)
 medalFrame.BackgroundTransparency = 0.12
 medalFrame.BorderSizePixel = 0
@@ -773,13 +773,13 @@ local medalScale = Instance.new("UIScale")
 medalScale.Parent = medalFrame
 
 local medalTitle = Instance.new("TextLabel")
-medalTitle.Size = UDim2.new(1, -20, 0, 34)
-medalTitle.Position = UDim2.fromOffset(10, 3)
+medalTitle.Size = UDim2.new(1, -16, 1, 0)
+medalTitle.Position = UDim2.fromOffset(8, 0)
 medalTitle.BackgroundTransparency = 1
 medalTitle.Font = Enum.Font.GothamBlack
 medalTitle.Text = "BLUE PLATE SPECIAL"
 medalTitle.TextColor3 = Color3.fromRGB(127, 231, 255)
-medalTitle.TextSize = 19
+medalTitle.TextSize = 12
 medalTitle.TextStrokeColor3 = Color3.fromRGB(3, 7, 12)
 medalTitle.TextStrokeTransparency = 0.3
 medalTitle.Parent = medalFrame
@@ -792,6 +792,7 @@ medalSubtitle.Font = Enum.Font.GothamBold
 medalSubtitle.Text = "COMBAT AWARD"
 medalSubtitle.TextColor3 = Color3.fromRGB(164, 178, 194)
 medalSubtitle.TextSize = 10
+medalSubtitle.Visible = false
 medalSubtitle.Parent = medalFrame
 
 local medalSequence = 0
@@ -818,7 +819,7 @@ local function showCombatMedal(award: string)
 	sound:Play()
 	Debris:AddItem(sound, 2)
 
-	task.delay(1.45, function()
+	task.delay(0.9, function()
 		if sequence == medalSequence then
 			TweenService:Create(medalFrame, TweenInfo.new(0.45), { GroupTransparency = 1 }):Play()
 		end
@@ -1000,7 +1001,7 @@ PlayerHudState.JetpackEnergyChanged:Connect(function(energy: number)
 	local maxEnergy = player:GetAttribute("MaxEnergy")
 	local ratio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
 	jetpackFill.Size = UDim2.new(ratio, 0, 1, 0)
-	jetpackLabel.Text = string.format("THRUST RESERVE // %03d", math.floor(ratio * 100 + 0.5))
+	jetpackLabel.Text = string.format("JET // %03d", math.floor(ratio * 100 + 0.5))
 	jetpackLabel.TextColor3 = if ratio <= 0.18 then Color3.fromRGB(255, 104, 58) else hudBright
 end)
 
@@ -1017,7 +1018,7 @@ local function bindHealth(character: Model)
 		lastHealth = humanoid.Health
 		local ratio = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
 		TweenService:Create(healthFill, TweenInfo.new(0.15), { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
-		healthLabel.Text = string.format("VITAL INTEGRITY // %03d", math.floor(ratio * 100 + 0.5))
+		healthLabel.Text = string.format("HP // %03d", math.floor(ratio * 100 + 0.5))
 		healthLabel.TextColor3 = if ratio <= 0.25 then Color3.fromRGB(255, 88, 58) else hudBright
 	end
 
@@ -1308,6 +1309,8 @@ end
 
 local navigationAccumulator = 0
 RunService.RenderStepped:Connect(function(dt)
+	navCompass.Visible = isCarryingFlag
+	navZoneFrame.Visible = isCarryingFlag
 	local camera = workspace.CurrentCamera
 	if camera then
 		local look = camera.CFrame.LookVector

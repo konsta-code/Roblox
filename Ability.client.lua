@@ -170,6 +170,7 @@ RunService.RenderStepped:Connect(function()
 	local ratio = math.clamp(1 - remaining / definition.cooldown, 0, 1)
 
 	panel.Visible = player:GetAttribute("LoadoutMenuOpen") ~= true
+		and (remaining > 0 or activeUntil > now or silencedUntil > now)
 	local camera = workspace.CurrentCamera
 	if camera then
 		scale.Scale = math.clamp(camera.ViewportSize.X / 1500, 0.78, 1)

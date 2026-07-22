@@ -33,6 +33,7 @@ openButton.Font = Enum.Font.GothamBold
 openButton.TextSize = 13
 openButton.TextColor3 = Color3.fromRGB(235, 235, 240)
 openButton.Text = "[L] LOADOUT"
+openButton.Visible = false
 openButton.Parent = gui
 
 local openCorner = Instance.new("UICorner")

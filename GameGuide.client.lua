@@ -29,6 +29,7 @@ openButton.Font = Enum.Font.GothamBold
 openButton.Text = "[F1] GUIDE"
 openButton.TextColor3 = Color3.fromRGB(150, 225, 255)
 openButton.TextSize = 12
+openButton.Visible = false
 openButton.Parent = gui
 local openCorner = Instance.new("UICorner")
 openCorner.CornerRadius = UDim.new(0, 6)
@@ -178,6 +179,7 @@ tip.Text = "SPACE  SKI    //    SHIFT/RMB  JET    //    1/2  WEAPONS    //    L 
 tip.TextColor3 = Color3.fromRGB(170, 228, 250)
 tip.TextSize = 12
 tip.TextTransparency = 1
+tip.Visible = false
 tip.Parent = gui
 local tipCorner = Instance.new("UICorner")
 tipCorner.CornerRadius = UDim.new(0, 7)
@@ -196,13 +198,3 @@ if workspace.CurrentCamera then
 end
 updateScale()
 refreshClass()
-
-task.delay(1.4, function()
-	TweenService:Create(tip, TweenInfo.new(0.35), { TextTransparency = 0 }):Play()
-	task.delay(7, function()
-		TweenService:Create(tip, TweenInfo.new(0.55), {
-			TextTransparency = 1,
-			BackgroundTransparency = 1,
-		}):Play()
-	end)
-end)

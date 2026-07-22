@@ -84,6 +84,20 @@ header.Parent = content
 
 local labels: { [Team]: TextLabel } = {}
 
+local function refreshPanelVisibility()
+	local show = false
+	for _, team in Teams:GetTeams() do
+		local health = ReplicatedStorage:GetAttribute("GeneratorHealth_" .. team.Name)
+		local maxHealth = ReplicatedStorage:GetAttribute("GeneratorMaxHealth_" .. team.Name)
+		local powered = ReplicatedStorage:GetAttribute("BasePower_" .. team.Name)
+		if powered == false or (typeof(health) == "number" and typeof(maxHealth) == "number" and health < maxHealth) then
+			show = true
+			break
+		end
+	end
+	frame.Visible = show
+end
+
 local function updateTeam(team: Team)
 	local label = labels[team]
 	if not label then
@@ -106,6 +120,7 @@ local function updateTeam(team: Team)
 		then Color3.fromRGB(255, 179, 69)
 		else team.TeamColor.Color:Lerp(Color3.new(1, 1, 1), 0.35)
 	label.BackgroundColor3 = team.TeamColor.Color:Lerp(Color3.fromRGB(8, 12, 18), 0.72)
+	refreshPanelVisibility()
 end
 
 for _, team in Teams:GetTeams() do
@@ -156,22 +171,22 @@ local function attachGeneratorMarker(instance: Instance)
 	end
 	local markerGui = Instance.new("BillboardGui")
 	markerGui.Name = "GeneratorMarker"
-	markerGui.Size = UDim2.fromOffset(250, 42)
+	markerGui.Size = UDim2.fromOffset(150, 26)
 	markerGui.StudsOffsetWorldSpace = Vector3.new(0, 8, 0)
-	markerGui.AlwaysOnTop = true
-	markerGui.MaxDistance = 1600
+	markerGui.AlwaysOnTop = false
+	markerGui.MaxDistance = 500
 	markerGui.ResetOnSpawn = false
 	markerGui.Parent = instance
 
 	local markerLabel = Instance.new("TextLabel")
 	markerLabel.Size = UDim2.fromScale(1, 1)
 	markerLabel.BackgroundColor3 = Color3.fromRGB(6, 11, 17)
-	markerLabel.BackgroundTransparency = 0.3
+	markerLabel.BackgroundTransparency = 0.68
 	markerLabel.BorderSizePixel = 0
 	markerLabel.Font = Enum.Font.GothamBlack
 	markerLabel.Text = "GENERATOR"
 	markerLabel.TextColor3 = instance.Color
-	markerLabel.TextSize = 13
+	markerLabel.TextSize = 10
 	markerLabel.TextStrokeColor3 = Color3.fromRGB(3, 6, 9)
 	markerLabel.TextStrokeTransparency = 0.35
 	markerLabel.Parent = markerGui
@@ -311,9 +326,12 @@ RunService.Heartbeat:Connect(function(dt)
 			then math.round(health / maxHealth * 100)
 			else 0
 		local distance = ""
+		local distanceStuds = math.huge
 		if root and root:IsA("BasePart") then
-			distance = string.format(" // %dm", math.floor((part.Position - root.Position).Magnitude / 3.57))
+			distanceStuds = (part.Position - root.Position).Magnitude
+			distance = string.format(" // %dm", math.floor(distanceStuds / 3.57))
 		end
+		marker.gui.Enabled = distanceStuds <= 260 or percent < 100
 		marker.label.Text = string.format(
 			"%s GENERATOR // %d%% // %s%s",
 			string.upper(typeof(teamName) == "string" and teamName or "BASE"),

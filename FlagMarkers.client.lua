@@ -37,19 +37,19 @@ local function attachMarker(flag: Instance)
 
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "FlagMarker"
-	gui.Size = UDim2.fromOffset(210, 38)
+	gui.Size = UDim2.fromOffset(132, 24)
 	gui.StudsOffset = Vector3.new(0, 9, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 1000
+	gui.MaxDistance = 550
 	gui.ResetOnSpawn = false
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundColor3 = Color3.fromRGB(7, 11, 17)
-	label.BackgroundTransparency = 0.42
+	label.BackgroundTransparency = 0.68
 	label.BorderSizePixel = 0
 	label.Font = Enum.Font.GothamBlack
-	label.TextSize = 14
+	label.TextSize = 10
 	label.TextColor3 = flag.Color
 	label.TextStrokeColor3 = Color3.fromRGB(8, 10, 14)
 	label.TextStrokeTransparency = 0.25
@@ -102,6 +102,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 
 		local teamName = string.upper(string.gsub(flag.Name, "Flag$", ""))
+		local distanceStuds = if root and root:IsA("BasePart") then (flag.Position - root.Position).Magnitude else math.huge
 		local replicatedState = flag:GetAttribute("FlagState")
 		if typeof(replicatedState) == "string" then
 			local status = ""
@@ -127,9 +128,10 @@ RunService.Heartbeat:Connect(function(dt)
 			if root and root:IsA("BasePart") then
 				distanceText = string.format("  %dm", math.floor((flag.Position - root.Position).Magnitude / 3.57))
 			end
+			marker.gui.Enabled = replicatedState ~= "AtBase" or distanceStuds <= 300
 			marker.label.Text = if status == ""
-				then string.format("FLAG %s%s", teamName, distanceText)
-				else string.format("FLAG %s // %s%s", teamName, status, distanceText)
+				then string.format("◆ %s%s", teamName, distanceText)
+				else string.format("◆ %s // %s%s", teamName, status, distanceText)
 			continue
 		end
 		local status: string
@@ -148,9 +150,10 @@ RunService.Heartbeat:Connect(function(dt)
 			distanceText = string.format("  %dm", math.floor((flag.Position - root.Position).Magnitude / 3.57))
 		end
 
+		marker.gui.Enabled = status ~= "" or distanceStuds <= 300
 		marker.label.Text = if status == ""
-			then string.format("⚑ %s%s", teamName, distanceText)
-			else string.format("⚑ %s · %s%s", teamName, status, distanceText)
+			then string.format("◆ %s%s", teamName, distanceText)
+			else string.format("◆ %s · %s%s", teamName, status, distanceText)
 	end
 end)
 
@@ -411,7 +414,8 @@ for _, part in CollectionService:GetTagged("PowerGenerator") do
 	makeObjectiveDot(part, radarGeneratorDots, 7, true)
 end
 
-local radarVisible = true
+local radarVisible = false
+radar.Visible = false
 UserInputService.InputBegan:Connect(function(input, processed)
 	if not processed and input.KeyCode == Enum.KeyCode.M then
 		radarVisible = not radarVisible
