@@ -37,10 +37,10 @@ type Flag = {
 	homeCFrame: CFrame,
 	part: BasePart,
 	state: FlagState,
-	carrier: Player?,
+	carrier: any?,
 	returnTimer: number?,
 	stand: BasePart,
-	pickupBlockedPlayer: Player?,
+	pickupBlockedPlayer: any?,
 	pickupBlockedUntil: number?,
 }
 
@@ -53,17 +53,72 @@ local function isLiveCapturePhase(): boolean
 	return currentPhase == "InProgress" or currentPhase == "Overtime"
 end
 
-local function publishFlagEvent(kind: string, flag: Flag, actor: Player?)
+local function getActorPlayer(actor: any): Player?
+	return if typeof(actor) == "Instance" and actor:IsA("Player") then actor else nil
+end
+
+local function getActorCharacter(actor: any): Model?
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer then
+		return actorPlayer.Character
+	end
+	return if typeof(actor) == "Instance" and actor:IsA("Model") then actor else nil
+end
+
+local function getActorRoot(actor: any): BasePart?
+	local character = getActorCharacter(actor)
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+local function getActorTeam(actor: any): Team?
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer then
+		return actorPlayer.Team
+	end
+	local character = getActorCharacter(actor)
+	local teamName = character and character:GetAttribute("BotTeam")
+	local team = typeof(teamName) == "string" and Teams:FindFirstChild(teamName) or nil
+	return if team and team:IsA("Team") then team else nil
+end
+
+local function getActorName(actor: any): string
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer then
+		return actorPlayer.Name
+	end
+	local character = getActorCharacter(actor)
+	return character and character.Name or ""
+end
+
+local function actorIsAlive(actor: any): boolean
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer and actorPlayer.Parent ~= Players then
+		return false
+	end
+	local character = getActorCharacter(actor)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return character ~= nil and character.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0
+end
+
+local function sendCarryStatus(actor: any, carrying: boolean, teamName: string)
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer and actorPlayer.Parent == Players then
+		carryStatusEvent:FireClient(actorPlayer, carrying, teamName)
+	end
+end
+
+local function publishFlagEvent(kind: string, flag: Flag, actor: any?)
 	ReplicatedStorage:SetAttribute("FlagEventKind", kind)
 	ReplicatedStorage:SetAttribute("FlagEventTeam", flag.team.Name)
-	ReplicatedStorage:SetAttribute("FlagEventPlayer", actor and actor.Name or "")
+	ReplicatedStorage:SetAttribute("FlagEventPlayer", actor and getActorName(actor) or "")
 	flagEventSerial += 1
 	ReplicatedStorage:SetAttribute("FlagEventSerial", flagEventSerial)
 end
 
 local function replicateFlagState(flag: Flag)
 	flag.part:SetAttribute("FlagState", flag.state)
-	flag.part:SetAttribute("CarrierName", flag.carrier and flag.carrier.Name or "")
+	flag.part:SetAttribute("CarrierName", flag.carrier and getActorName(flag.carrier) or "")
 	flag.part:SetAttribute("ReturnTime", flag.returnTimer and math.max(0, math.ceil(flag.returnTimer)) or 0)
 end
 
@@ -83,6 +138,7 @@ local function createFlagVisual(homeCFrame: CFrame, team: Team): BasePart
 	-- Tag für Client-Systeme (FlagMarkers): Flaggen auffindbar machen, ohne
 	-- Namens-Konventionen raten zu müssen. Überlebt Reparenting beim Tragen.
 	CollectionService:AddTag(part, "CTFFlag")
+	part:SetAttribute("Team", team.Name)
 	part.Parent = workspace
 
 	local function visualPart(name: string, size: Vector3, offset: CFrame, material: Enum.Material): BasePart
@@ -157,18 +213,17 @@ local function returnFlagToBase(flag: Flag, announceReturn: boolean?, actor: Pla
 	flag.part.Parent = workspace
 	replicateFlagState(flag)
 
-	if previousCarrier and previousCarrier.Parent == Players then
-		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
-	end
+	if previousCarrier then sendCarryStatus(previousCarrier, false, flag.team.Name) end
 	if announceReturn then
-		if actor then
-			CombatService.AddObjective(actor, 50, "FLAG RETURN")
+		local actorPlayer = actor and getActorPlayer(actor)
+		if actorPlayer then
+			CombatService.AddObjective(actorPlayer, 50, "FLAG RETURN")
 		end
 		publishFlagEvent("Returned", flag, actor)
 	end
 end
 
-local function dropFlag(flag: Flag, atPosition: Vector3, launchVelocity: Vector3?, pickupBlockedPlayer: Player?)
+local function dropFlag(flag: Flag, atPosition: Vector3, launchVelocity: Vector3?, pickupBlockedPlayer: any?)
 	local previousCarrier = flag.carrier
 
 	detachFlagPhysics(flag)
@@ -191,20 +246,18 @@ local function dropFlag(flag: Flag, atPosition: Vector3, launchVelocity: Vector3
 	end
 	replicateFlagState(flag)
 
-	if previousCarrier and previousCarrier.Parent == Players then
-		carryStatusEvent:FireClient(previousCarrier, false, flag.team.Name)
-	end
+	if previousCarrier then sendCarryStatus(previousCarrier, false, flag.team.Name) end
 	publishFlagEvent("Dropped", flag, previousCarrier)
 end
 
-local function attachFlagToCarrier(flag: Flag, player: Player)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
+local function attachFlagToCarrier(flag: Flag, actor: any)
+	local character = getActorCharacter(actor)
+	local root = getActorRoot(actor)
 	if not root then return end
 
 	local wasAtBase = flag.state == "AtBase"
 	flag.state = "Carried"
-	flag.carrier = player
+	flag.carrier = actor
 	flag.returnTimer = nil
 	flag.pickupBlockedPlayer = nil
 	flag.pickupBlockedUntil = nil
@@ -220,10 +273,13 @@ local function attachFlagToCarrier(flag: Flag, player: Player)
 	weld.C0 = CFrame.new(0, 1.5, 0) -- Banner ueber der Schulter, ohne die Sicht zu verdecken
 	weld.Parent = flag.part
 
-	carryStatusEvent:FireClient(player, true, flag.team.Name)
+	sendCarryStatus(actor, true, flag.team.Name)
 	replicateFlagState(flag)
-	publishFlagEvent("Taken", flag, player)
-	CombatService.AddObjective(player, if wasAtBase then 25 else 10, if wasAtBase then "FLAG GRAB" else "FLAG RECOVERY")
+	publishFlagEvent("Taken", flag, actor)
+	local actorPlayer = getActorPlayer(actor)
+	if actorPlayer then
+		CombatService.AddObjective(actorPlayer, if wasAtBase then 25 else 10, if wasAtBase then "FLAG GRAB" else "FLAG RECOVERY")
+	end
 end
 
 -- === Game-Logik ===
@@ -249,54 +305,54 @@ local function resetAllFlags()
 	end
 end
 
-local function onCapture(flag: Flag, scoringPlayer: Player)
-	local scoringTeam = scoringPlayer.Team :: Team?
+local function onCapture(flag: Flag, scoringActor: any)
+	local scoringTeam = getActorTeam(scoringActor)
 	if not scoringTeam then return end
 
 	local newScore = (scores[scoringTeam] or 0) + 1
-	setScore(scoringTeam, newScore, scoringPlayer.Name)
-	CombatService.AddCapture(scoringPlayer)
+	setScore(scoringTeam, newScore, getActorName(scoringActor))
+	local scoringPlayer = getActorPlayer(scoringActor)
+	if scoringPlayer then CombatService.AddCapture(scoringPlayer) end
 	CTFSignals.FireCaptureOccurred(scoringTeam, newScore)
 
 	returnFlagToBase(flag)
 end
 
-local function checkCaptureCondition(carrierFlag: Flag, player: Player)
+local function checkCaptureCondition(carrierFlag: Flag, actor: any)
 	if not isLiveCapturePhase() then return end
-	local team = player.Team :: Team?
+	local team = getActorTeam(actor)
 	if not team then return end
 
 	local ownFlag = findFlagByTeam(team)
 	if not ownFlag or ownFlag.state ~= "AtBase" then return end -- eigene Flagge muss daheim sein
 
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local root = getActorRoot(actor)
 	if not root then return end
 
 	local distance = (root.Position - ownFlag.homeCFrame.Position).Magnitude
 	if distance <= Constants.CAPTURE_RADIUS then
-		onCapture(carrierFlag, player)
+		onCapture(carrierFlag, actor)
 	end
 end
 
-local function tryPickup(flag: Flag, player: Player)
+local function tryPickup(flag: Flag, actor: any)
 	if not isLiveCapturePhase() then return end
-	if flag.pickupBlockedPlayer == player
+	if flag.pickupBlockedPlayer == actor
 		and typeof(flag.pickupBlockedUntil) == "number"
 		and os.clock() < flag.pickupBlockedUntil then return end
-	local team = player.Team :: Team?
+	local team = getActorTeam(actor)
 	if not team then return end
 
 	if team == flag.team then
 		-- Eigenes Team berührt eigene (gedroppte) Flagge -> sofortige Rückkehr
 		if flag.state == "Dropped" then
-			returnFlagToBase(flag, true, player)
+			returnFlagToBase(flag, true, actor)
 		end
 		return
 	end
 
 	if flag.state == "AtBase" or flag.state == "Dropped" then
-		attachFlagToCarrier(flag, player)
+		attachFlagToCarrier(flag, actor)
 	end
 end
 
@@ -337,8 +393,9 @@ local function setupFlagTouch(flag: Flag)
 	flag.part.Touched:Connect(function(hit)
 		local character = hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if player then
-			tryPickup(flag, player)
+		local actor = player or (character and character:GetAttribute("IsCTFBot") == true and character)
+		if actor then
+			tryPickup(flag, actor)
 		end
 	end)
 end
@@ -362,7 +419,11 @@ end
 RunService.Heartbeat:Connect(function(dt)
 	for _, flag in flags do
 		if flag.state == "Carried" and flag.carrier then
-			checkCaptureCondition(flag, flag.carrier)
+			if actorIsAlive(flag.carrier) then
+				checkCaptureCondition(flag, flag.carrier)
+			else
+				dropFlag(flag, flag.part.Position)
+			end
 		elseif flag.state == "Dropped" and flag.returnTimer then
 			flag.returnTimer -= dt
 			local returnSecond = math.max(0, math.ceil(flag.returnTimer))
@@ -383,10 +444,10 @@ CTFSignals.ResetScoresRequested:Connect(function()
 	resetAllFlags()
 end)
 
-CTFSignals.FlagFumbleRequested:Connect(function(player: Player)
+CTFSignals.FlagFumbleRequested:Connect(function(actor: any)
 	for _, flag in flags do
-		if flag.state == "Carried" and flag.carrier == player then
-			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if flag.state == "Carried" and flag.carrier == actor then
+			local root = getActorRoot(actor)
 			dropFlag(flag, root and root.Position or flag.homeCFrame.Position)
 		end
 	end
@@ -445,9 +506,7 @@ local function unregisterStand(standPart: Instance)
 	for i = #flags, 1, -1 do
 		local flag = flags[i]
 		if flag.stand == standPart then
-			if flag.carrier then
-				carryStatusEvent:FireClient(flag.carrier, false, flag.team.Name)
-			end
+			if flag.carrier then sendCarryStatus(flag.carrier, false, flag.team.Name) end
 			flag.part:Destroy()
 			table.remove(flags, i)
 		end

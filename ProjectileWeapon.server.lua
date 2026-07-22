@@ -3,6 +3,7 @@
 -- direction; origin, velocity inheritance, collision, damage and knockback
 -- are all calculated by the server.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -139,6 +140,19 @@ local function applyExplosion(
 			local damage = getSplashDamage(profile, (targetRoot.Position - position).Magnitude)
 			if damage > 0 and hasExplosionLineOfSight(position, targetCharacter, targetRoot, shooter.Character) then
 				CombatService.Damage(shooter, targetHumanoid, damage, profile.name)
+			end
+		end
+	end
+	for _, targetCharacter in CollectionService:GetTagged("CTFBot") do
+		if targetCharacter:IsA("Model") and targetCharacter:GetAttribute("BotTeam") ~= (shooter.Team and shooter.Team.Name) then
+			local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+			local targetHumanoid = targetCharacter:FindFirstChildOfClass("Humanoid")
+			if targetRoot and targetRoot:IsA("BasePart") and targetHumanoid and targetHumanoid.Health > 0
+				and targetHumanoid ~= directHumanoid then
+				local damage = getSplashDamage(profile, (targetRoot.Position - position).Magnitude)
+				if damage > 0 and hasExplosionLineOfSight(position, targetCharacter, targetRoot, shooter.Character) then
+					CombatService.Damage(shooter, targetHumanoid, damage, profile.name)
+				end
 			end
 		end
 	end
@@ -347,11 +361,13 @@ RunService.Heartbeat:Connect(function(dt)
 			if result then
 				local directHumanoid = hitHumanoid(result.Instance)
 				local hitBase = false
+				local directCharacter = directHumanoid and directHumanoid.Parent
 				local directPlayer = directHumanoid
-					and Players:GetPlayerFromCharacter(directHumanoid.Parent)
-				local canDamageDirect = not directPlayer
-					or directPlayer == projectile.shooter
-					or directPlayer.Team ~= projectile.shooter.Team
+					and Players:GetPlayerFromCharacter(directCharacter)
+				local directBotTeam = directCharacter and directCharacter:GetAttribute("BotTeam")
+				local canDamageDirect = if directPlayer
+					then directPlayer == projectile.shooter or directPlayer.Team ~= projectile.shooter.Team
+					else directBotTeam == nil or directBotTeam ~= (projectile.shooter.Team and projectile.shooter.Team.Name)
 				if directHumanoid and directHumanoid.Health > 0 and canDamageDirect then
 					local award = directHitAward(directHumanoid, projectile.profile)
 					CombatService.Damage(

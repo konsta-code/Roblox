@@ -60,7 +60,11 @@ local function validateAndApplyDamage(
 			local hitCharacter = result.Instance:FindFirstAncestorOfClass("Model")
 			local targetPlayer = hitCharacter and Players:GetPlayerFromCharacter(hitCharacter)
 			local targetHumanoid = hitCharacter and hitCharacter:FindFirstChildOfClass("Humanoid")
-			if targetPlayer and targetHumanoid and targetHumanoid.Health > 0 then
+			local targetBotTeam = hitCharacter and hitCharacter:GetAttribute("BotTeam")
+			local canDamage = if targetPlayer
+				then targetPlayer == shooter or targetPlayer.Team ~= shooter.Team
+				else targetBotTeam ~= nil and targetBotTeam ~= (shooter.Team and shooter.Team.Name)
+			if targetHumanoid and targetHumanoid.Health > 0 and canDamage then
 				CombatService.Damage(shooter, targetHumanoid, profile.damagePerHit, profile.name)
 			else
 				BaseService.DamageHit(shooter, result.Instance, profile.damagePerHit)

@@ -306,6 +306,38 @@ for _, target in Players:GetPlayers() do
 	createRadarPlayerDot(target)
 end
 
+local radarBotDots: { [Model]: Frame } = {}
+local function createRadarBotDot(instance: Instance)
+	if not instance:IsA("Model") or radarBotDots[instance] then return end
+	local dot = Instance.new("Frame")
+	dot.Name = "Bot"
+	dot.Size = UDim2.fromOffset(7, 7)
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.BackgroundColor3 = instance:GetAttribute("BotTeam") == "Red"
+		and Color3.fromRGB(220, 70, 65) or Color3.fromRGB(65, 135, 235)
+	dot.BorderSizePixel = 0
+	dot.Rotation = 45
+	dot.ZIndex = 4
+	dot.Visible = false
+	dot.Parent = radarMap
+	radarBotDots[instance] = dot
+end
+
+local function removeRadarBotDot(instance: Instance)
+	if not instance:IsA("Model") then return end
+	local dot = radarBotDots[instance]
+	if dot then
+		dot:Destroy()
+		radarBotDots[instance] = nil
+	end
+end
+
+CollectionService:GetInstanceAddedSignal("CTFBot"):Connect(createRadarBotDot)
+CollectionService:GetInstanceRemovedSignal("CTFBot"):Connect(removeRadarBotDot)
+for _, instance in CollectionService:GetTagged("CTFBot") do
+	createRadarBotDot(instance)
+end
+
 type ObjectiveDot = { dot: Frame, part: BasePart }
 local radarFlagDots: { [BasePart]: ObjectiveDot } = {}
 local radarGeneratorDots: { [BasePart]: ObjectiveDot } = {}
@@ -401,6 +433,26 @@ RunService.RenderStepped:Connect(function(dt)
 					then Color3.fromRGB(255, 89, 76)
 					else target.Team and target.Team.TeamColor.Color or Color3.fromRGB(105, 205, 255)
 			end
+		end
+	end
+
+	local localRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	for bot, dot in radarBotDots do
+		local root = bot:FindFirstChild("HumanoidRootPart")
+		local humanoid = bot:FindFirstChildOfClass("Humanoid")
+		local botTeam = bot:GetAttribute("BotTeam")
+		local isAlly = player.Team ~= nil and botTeam == player.Team.Name
+		local nearby = localRoot and localRoot:IsA("BasePart") and root and root:IsA("BasePart")
+			and (root.Position - localRoot.Position).Magnitude <= 260
+		local carrying = bot:FindFirstChild("RedFlag") or bot:FindFirstChild("BlueFlag")
+		local visible = root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
+			and (isAlly or nearby or carrying ~= nil)
+		dot.Visible = visible == true
+		if visible and root and root:IsA("BasePart") then
+			dot.Position = worldToRadar(root.Position)
+			dot.Size = UDim2.fromOffset(carrying and 11 or 7, carrying and 11 or 7)
+			dot.BackgroundColor3 = if botTeam == "Red"
+				then Color3.fromRGB(220, 70, 65) else Color3.fromRGB(65, 135, 235)
 		end
 	end
 

@@ -1,6 +1,7 @@
 -- Equipment.server.lua
 -- Serverautoritäre Granaten- und Nahkampfsimulation.
 
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -188,6 +189,31 @@ local function explodeGrenade(grenade: Grenade)
 					end
 					root.AssemblyLinearVelocity += impulse
 					movementImpulse:FireClient(targetPlayer, impulse)
+				end
+			end
+		end
+	end
+	for _, character in CollectionService:GetTagged("CTFBot") do
+		if character:IsA("Model") and character:GetAttribute("BotTeam") ~= (grenade.shooter.Team and grenade.shooter.Team.Name) then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			local root = character:FindFirstChild("HumanoidRootPart")
+			if humanoid and humanoid.Health > 0 and root and root:IsA("BasePart") then
+				local offset = root.Position - position
+				local distance = offset.Magnitude
+				if distance <= profile.radius and hasExplosionLineOfSight(position, character, root) then
+					local ratio = math.clamp(distance / profile.radius, 0, 1)
+					local damage = profile.maxDamage + (profile.minDamage - profile.maxDamage) * ratio
+					if CombatService.Damage(grenade.shooter, humanoid, damage, profile.name) then
+						if profile.causesFlagFumble then CTFSignals.RequestFlagFumble(character) end
+						local direction = distance > 0.05 and offset.Unit or Vector3.yAxis
+						local strength = 1 - ratio
+						local impulse = direction * profile.knockbackSpeed * strength
+							+ Vector3.yAxis * profile.knockbackUpSpeed * strength
+						if impulse.Magnitude > Constants.GRENADE_MAX_IMPULSE then
+							impulse = impulse.Unit * Constants.GRENADE_MAX_IMPULSE
+						end
+						root.AssemblyLinearVelocity += impulse
+					end
 				end
 			end
 		end

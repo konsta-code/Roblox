@@ -260,6 +260,10 @@ local function damageInternal(
 			amount *= math.clamp(multiplier, 0.5, 2)
 		end
 	end
+	if attacker and targetCharacter and targetCharacter:GetAttribute("IsCTFBot") == true then
+		targetCharacter:SetAttribute("LastAttackerUserId", attacker.UserId)
+		targetCharacter:SetAttribute("LastAttackedAt", workspace:GetServerTimeNow())
+	end
 	if targetPlayer then
 		local reduction = targetPlayer:GetAttribute("AbilityDamageReduction")
 		if typeof(reduction) == "number" then
@@ -349,6 +353,14 @@ function CombatService.AddObjective(player: Player, points: number, reason: stri
 	if player.Parent == Players and typeof(points) == "number" and typeof(reason) == "string" then
 		awardScore(player, math.clamp(math.floor(points), 1, 1000), reason)
 	end
+end
+
+function CombatService.AddBotElimination(player: Player, botName: string)
+	CombatService.Init()
+	if player.Parent ~= Players then return end
+	addCareerAndRound(player, "Kills", 1)
+	awardScore(player, 75, "BOT ELIMINATION")
+	combatFeedEvent:FireAllClients(player.DisplayName, botName, "BOT")
 end
 
 function CombatService.BreakSpawnProtection(player: Player)

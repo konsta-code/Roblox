@@ -25,8 +25,8 @@ end
 local flagFumbleRequested = Instance.new("BindableEvent")
 CTFSignals.FlagFumbleRequested = flagFumbleRequested.Event
 
-function CTFSignals.RequestFlagFumble(player: Player)
-	flagFumbleRequested:Fire(player)
+function CTFSignals.RequestFlagFumble(actor: any)
+	flagFumbleRequested:Fire(actor)
 end
 
 return CTFSignals

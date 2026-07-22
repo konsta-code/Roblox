@@ -64,6 +64,7 @@
       "WorldEnvironment": { "$path": "WorldEnvironment.server.lua" },
       "PlayerData": { "$path": "PlayerData.server.lua" },
       "CharacterPresentation": { "$path": "CharacterPresentation.server.lua" },
+      "BotManager": { "$path": "BotManager.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" }
     },
     "StarterPlayer": {

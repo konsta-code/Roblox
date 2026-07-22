@@ -15,6 +15,14 @@ Hintergrund; das Startfenster darf danach geschlossen werden.
 Die große Karte wird beim Serverstart von `MapBuilder.server.lua` erzeugt; im
 reinen Edit-Modus kann deshalb zunächst nur die Baseplate sichtbar sein.
 
+## Solo-Runde mit Bots
+
+In Roblox Studio starten automatisch drei rote und drei blaue Bots. Sie nutzen
+unterschiedliche Klassen, kämpfen, greifen Flaggen an, bringen sie zurück,
+respawnen und erscheinen auf dem taktischen Radar. Bot-Kills geben 75 Punkte.
+Die Bots sind absichtlich nur in Studio aktiv und erscheinen nicht ungefragt in
+einem veröffentlichten Live-Server.
+
 ## Steuerung
 
 - `WASD`: bewegen
