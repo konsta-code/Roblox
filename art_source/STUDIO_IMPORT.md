@@ -51,10 +51,12 @@ Import these eight files from
 - `Titan_EastGlacierVault.fbx`
 - `Titan_CanyonBackdrop.fbx`
 
-Keep their names unchanged and move all resulting models into
-`ReplicatedStorage/MapAssets`. On the next **Play**, `ImportedMapLoader` checks
-for the complete set, anchors every MeshPart, disables mesh collision and puts
-the modules at the exact pivots stored in `roblox_import_manifest.json`.
+Keep their names unchanged and leave **Add to Workspace** enabled. On the next
+**Play**, `ImportedMapLoader` detects the complete set directly in Workspace,
+groups it under `Workspace/ImportedMap/TitanAlpine`, anchors every MeshPart,
+disables mesh collision and puts all modules at the exact pivots stored in
+`roblox_import_manifest.json`. Moving the models to
+`ReplicatedStorage/MapAssets` beforehand is optional but keeps edit mode tidy.
 
 Do not delete `MapBuilder.server.lua`: its invisible/simple ramps, stations,
 generators, turrets, flags and tags remain gameplay-critical. If even one

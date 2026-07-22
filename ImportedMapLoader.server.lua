@@ -19,7 +19,13 @@ local assetFolder = ReplicatedStorage:FindFirstChild("MapAssets")
 local templates = {}
 local missing = {}
 for _, definition in MODULES do
+	-- Studio's importer adds models to Workspace by default. Accept that path
+	-- as well as the tidy long-term MapAssets folder, so the first import needs
+	-- no manual Explorer reparenting.
 	local template = assetFolder and assetFolder:FindFirstChild(definition.name, true)
+	if not template then
+		template = workspace:FindFirstChild(definition.name, true)
+	end
 	if template and (template:IsA("Model") or template:IsA("BasePart")) then
 		templates[definition.name] = template
 	else
@@ -53,7 +59,8 @@ local function configurePart(part: BasePart)
 end
 
 for _, definition in MODULES do
-	local clone = templates[definition.name]:Clone()
+	local template = templates[definition.name]
+	local clone = if template:IsDescendantOf(workspace) then template else template:Clone()
 	clone.Name = definition.name
 	clone.Parent = titan
 	if clone:IsA("BasePart") then
