@@ -32,6 +32,41 @@ type Projectile = {
 local projectiles: { Projectile } = {}
 local lastFireTime: { [Player]: number } = {}
 
+local function spatialSound(
+	parent: Instance,
+	name: string,
+	soundId: string,
+	volume: number,
+	pitch: number,
+	minDistance: number,
+	maxDistance: number,
+	lowGain: number,
+	highGain: number,
+	distortion: number?
+): Sound
+	local sound = Instance.new("Sound")
+	sound.Name = name
+	sound.SoundId = soundId
+	sound.Volume = volume
+	sound.PlaybackSpeed = pitch * (0.98 + math.random() * 0.04)
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMinDistance = minDistance
+	sound.RollOffMaxDistance = maxDistance
+	local equalizer = Instance.new("EqualizerSoundEffect")
+	equalizer.LowGain = lowGain
+	equalizer.MidGain = 0
+	equalizer.HighGain = highGain
+	equalizer.Parent = sound
+	if distortion and distortion > 0 then
+		local drive = Instance.new("DistortionSoundEffect")
+		drive.Level = distortion
+		drive.Parent = sound
+	end
+	sound.Parent = parent
+	sound:Play()
+	return sound
+end
+
 local function isFiniteVector(value: any): boolean
 	return typeof(value) == "Vector3"
 		and value.X == value.X and value.Y == value.Y and value.Z == value.Z
@@ -154,21 +189,19 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 		Debris:AddItem(wave, 0.55)
 	end
 
-	local impactSound = Instance.new("Sound")
-	impactSound.SoundId = "rbxasset://sounds/impact_explosion_03.mp3"
-	impactSound.Volume = 0.5
-	impactSound.PlaybackSpeed = math.clamp(1.25 - profile.splashRadius / 70, 0.72, 1.05)
-	impactSound.RollOffMinDistance = 10
-	impactSound.RollOffMaxDistance = 220
-	impactSound.Parent = sphere
-	impactSound:Play()
+	local impactPitch = math.clamp(1.25 - profile.splashRadius / 70, 0.72, 1.05)
+	spatialSound(sphere, "ImpactBody", "rbxasset://sounds/impact_explosion_03.mp3", 0.44, impactPitch, 10, 260, 5, -8, 0.06)
+	spatialSound(sphere, "ImpactDebris", "rbxasset://sounds/collide.wav", 0.25, 0.62 + impactPitch * 0.18, 8, 150, 3, -4, 0.12)
+	spatialSound(sphere, "PlasmaCrack", "rbxasset://sounds/electronicpingshort.wav", 0.20, 0.82 + impactPitch * 0.25, 12, 210, -8, 5, 0.04)
 
 	TweenService:Create(sphere, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Size = Vector3.one * profile.splashRadius * 2,
 		Transparency = 1,
 	}):Play()
 	TweenService:Create(light, TweenInfo.new(0.18), { Brightness = 0, Range = 0 }):Play()
-	Debris:AddItem(sphere, 0.65)
+	-- Keep the transparent anchor alive long enough for the layered spatial
+	-- sound tails and vapor particles to finish.
+	Debris:AddItem(sphere, 2.8)
 end
 
 local function applyExplosion(
@@ -303,19 +336,65 @@ local function spawnProjectile(
 	local part = Instance.new("Part")
 	part.Name = "SpinfusorDisc"
 	part.Shape = Enum.PartType.Ball
-	part.Size = Vector3.one * profile.projectileRadius * 2
+	part.Size = Vector3.one * math.max(0.2, profile.projectileRadius * 0.35)
 	part.Position = origin
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
-	part.Material = Enum.Material.Neon
+	part.Material = Enum.Material.SmoothPlastic
 	part.Color = profile.projectileColor
+	part.Transparency = 1
 	part.Parent = workspace
+
+	local disc = Instance.new("Part")
+	disc.Name = "DiscRotor"
+	disc.Shape = Enum.PartType.Cylinder
+	disc.Size = Vector3.new(
+		math.max(0.10, profile.projectileRadius * 0.30),
+		profile.projectileRadius * 2.75,
+		profile.projectileRadius * 2.75
+	)
+	disc.CFrame = part.CFrame
+	disc.Anchored = false
+	disc.CanCollide = false
+	disc.CanQuery = false
+	disc.CanTouch = false
+	disc.Massless = true
+	disc.Material = Enum.Material.ForceField
+	disc.Color = profile.projectileColor
+	disc.Transparency = 0.10
+	disc.Parent = part
+	local discWeld = Instance.new("WeldConstraint")
+	discWeld.Part0 = part
+	discWeld.Part1 = disc
+	discWeld.Parent = disc
+
+	local innerRotor = Instance.new("Part")
+	innerRotor.Name = "InnerRotor"
+	innerRotor.Shape = Enum.PartType.Cylinder
+	innerRotor.Size = Vector3.new(
+		math.max(0.12, profile.projectileRadius * 0.38),
+		profile.projectileRadius * 1.55,
+		profile.projectileRadius * 1.55
+	)
+	innerRotor.CFrame = part.CFrame
+	innerRotor.Anchored = false
+	innerRotor.CanCollide = false
+	innerRotor.CanQuery = false
+	innerRotor.CanTouch = false
+	innerRotor.Massless = true
+	innerRotor.Material = Enum.Material.Neon
+	innerRotor.Color = profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.48)
+	innerRotor.Parent = part
+	local rotorWeld = Instance.new("WeldConstraint")
+	rotorWeld.Part0 = part
+	rotorWeld.Part1 = innerRotor
+	rotorWeld.Parent = innerRotor
 
 	local core = Instance.new("Part")
 	core.Name = "DiscCore"
 	core.Shape = Enum.PartType.Ball
-	core.Size = part.Size * 0.48
+	core.Size = Vector3.one * math.max(0.16, profile.projectileRadius * 0.72)
 	core.CFrame = part.CFrame
 	core.Anchored = false
 	core.CanCollide = false
@@ -348,7 +427,42 @@ local function spawnProjectile(
 	trail.Color = ColorSequence.new(profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.4), profile.projectileColor)
 	trail.Lifetime = 0.16
 	trail.LightEmission = 1
+	trail.Brightness = 3
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.04),
+		NumberSequenceKeypoint.new(0.55, 0.22),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	trail.WidthScale = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(1, 0),
+	})
 	trail.Parent = part
+
+	local ionWake = Instance.new("ParticleEmitter")
+	ionWake.Name = "IonWake"
+	ionWake.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	ionWake.Color = ColorSequence.new(profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.48), profile.projectileColor)
+	ionWake.LightEmission = 1
+	ionWake.Lifetime = NumberRange.new(0.10, 0.24)
+	ionWake.Rate = 34
+	ionWake.Speed = NumberRange.new(0.5, 2.5)
+	ionWake.Drag = 3
+	ionWake.SpreadAngle = Vector2.new(20, 20)
+	ionWake.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, profile.projectileRadius * 0.46),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	ionWake.Transparency = NumberSequence.new(0.10, 1)
+	ionWake.Parent = part
+
+	local flightSound = spatialSound(part, "DiscFlight", "rbxasset://sounds/action_falling.ogg", 0.10, 1.85, 5, 105, -8, 4, 0.08)
+	flightSound:Stop()
+	flightSound.Looped = true
+	flightSound:Play()
+	Debris:AddItem(flightSound, Constants.PROJECTILE_LIFETIME + 0.5)
+	local launchSound = spatialSound(root, "DiscLaunch", "rbxasset://sounds/collide.wav", 0.22, 0.72 + math.clamp(profile.directDamage / 400, 0, 0.28), 8, 185, 4, -5, 0.12)
+	Debris:AddItem(launchSound, 2.5)
 
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -466,7 +580,11 @@ RunService.Heartbeat:Connect(function(dt)
 				table.remove(projectiles, index)
 			else
 				projectile.position += step
-				projectile.part.Position = projectile.position
+				local age = os.clock() - projectile.spawnTime
+				local direction = if projectile.velocity.Magnitude > 0.01 then projectile.velocity.Unit else Vector3.zAxis
+				projectile.part.CFrame = CFrame.lookAt(projectile.position, projectile.position + direction)
+					* CFrame.Angles(0, math.rad(90), 0)
+					* CFrame.Angles(age * 13, 0, 0)
 			end
 		end
 	end

@@ -112,11 +112,44 @@ WeaponState.Changed:Connect(refreshZoom)
 player:GetAttributeChangedSignal("Loadout"):Connect(refreshZoom)
 player:GetAttributeChangedSignal("LoadoutMenuOpen"):Connect(refreshZoom)
 
-local function playOneShot(soundId: string, volume: number, playbackSpeed: number)
+local function playOneShot(
+	soundId: string,
+	volume: number,
+	playbackSpeed: number,
+	lowGain: number?,
+	midGain: number?,
+	highGain: number?,
+	distortion: number?,
+	echo: number?
+)
 	local sound = Instance.new("Sound")
 	sound.SoundId = soundId
 	sound.Volume = volume
-	sound.PlaybackSpeed = playbackSpeed
+	sound.PlaybackSpeed = playbackSpeed * (0.975 + math.random() * 0.05)
+	local equalizer = Instance.new("EqualizerSoundEffect")
+	equalizer.LowGain = lowGain or 0
+	equalizer.MidGain = midGain or 0
+	equalizer.HighGain = highGain or 0
+	equalizer.Parent = sound
+	local compressor = Instance.new("CompressorSoundEffect")
+	compressor.Threshold = -18
+	compressor.Ratio = 4
+	compressor.Attack = 0.01
+	compressor.Release = 0.12
+	compressor.Parent = sound
+	if distortion and distortion > 0 then
+		local drive = Instance.new("DistortionSoundEffect")
+		drive.Level = distortion
+		drive.Parent = sound
+	end
+	if echo and echo > 0 then
+		local tail = Instance.new("EchoSoundEffect")
+		tail.Delay = 0.08
+		tail.Feedback = echo
+		tail.DryLevel = 0
+		tail.WetLevel = -8
+		tail.Parent = sound
+	end
 	sound.Parent = SoundService
 	sound:Play()
 	Debris:AddItem(sound, 3)
@@ -126,15 +159,25 @@ WeaponFeedback.Fired:Connect(function(weapon: WeaponFeedback.Weapon)
 	local kit = ClassKitConstants.Get(player:GetAttribute("Loadout"))
 	if weapon == "Spinfusor" then
 		local weight = math.clamp(kit.disc.directDamage / 115, 0.45, 1)
-		playOneShot("rbxasset://sounds/electronicpingshort.wav", 0.38 + weight * 0.2, 1.35 - weight * 0.45)
-		playOneShot("rbxasset://sounds/collide.wav", 0.12 + weight * 0.12, 0.75 + weight * 0.2)
+		-- Low launch body, physical breech and a short plasma crack. Layering
+		-- avoids the toy-like single electronic ping of the prototype.
+		playOneShot("rbxasset://sounds/impact_explosion_03.mp3", 0.13 + weight * 0.12, 1.32 - weight * 0.42, 5, -3, -10, 0.05)
+		playOneShot("rbxasset://sounds/collide.wav", 0.16 + weight * 0.11, 0.66 + weight * 0.17, 3, 1, -5, 0.10)
+		playOneShot("rbxasset://sounds/electronicpingshort.wav", 0.20 + weight * 0.13, 1.18 - weight * 0.26, -8, 2, 5, 0.03, 0.12)
 	elseif weapon == "Chaingun" then
 		local pitch = math.clamp(1.45 - kit.automatic.damagePerHit / 30, 0.72, 1.35)
-		playOneShot("rbxasset://sounds/electronicpingshort.wav", 0.22, pitch)
+		local heavyShot = math.clamp(kit.automatic.damagePerHit / 48 + (kit.automatic.pellets or 1) * 0.04, 0.18, 1)
+		playOneShot("rbxasset://sounds/collide.wav", 0.13 + heavyShot * 0.12, pitch, 2, 2, -1, 0.12 + heavyShot * 0.08)
+		playOneShot("rbxasset://sounds/electronicpingshort.wav", 0.07 + heavyShot * 0.08, pitch * 1.34, -9, 1, 4, 0.04)
+		if heavyShot > 0.62 then
+			playOneShot("rbxasset://sounds/impact_explosion_03.mp3", 0.07 + heavyShot * 0.07, 1.45 - heavyShot * 0.42, 4, -4, -12, 0.05)
+		end
 	elseif weapon == "Grenade" then
-		playOneShot("rbxasset://sounds/action_jump.mp3", 0.28, 0.82)
+		playOneShot("rbxasset://sounds/action_jump.mp3", 0.22, 0.76, 4, -2, -8, 0.06)
+		playOneShot("rbxasset://sounds/collide.wav", 0.13, 1.18, -3, 2, 2, 0.04)
 	elseif weapon == "Melee" then
-		playOneShot("rbxasset://sounds/action_jump.mp3", 0.34, 1.28)
+		playOneShot("rbxasset://sounds/action_jump.mp3", 0.25, 1.36, -7, 2, 5, 0.05)
+		playOneShot("rbxasset://sounds/collide.wav", 0.16, 0.88, 3, 1, -4, 0.08)
 	end
 end)
 
@@ -145,6 +188,11 @@ wind.Looped = true
 wind.Volume = 0
 wind.PlaybackSpeed = 0.45
 wind.Parent = SoundService
+local windEq = Instance.new("EqualizerSoundEffect")
+windEq.LowGain = -12
+windEq.MidGain = -3
+windEq.HighGain = 3
+windEq.Parent = wind
 wind:Play()
 
 local jet = Instance.new("Sound")
@@ -154,6 +202,14 @@ jet.Looped = true
 jet.Volume = 0
 jet.PlaybackSpeed = 1.7
 jet.Parent = SoundService
+local jetEq = Instance.new("EqualizerSoundEffect")
+jetEq.LowGain = 5
+jetEq.MidGain = -2
+jetEq.HighGain = -7
+jetEq.Parent = jet
+local jetDrive = Instance.new("DistortionSoundEffect")
+jetDrive.Level = 0.18
+jetDrive.Parent = jet
 jet:Play()
 
 RunService.RenderStepped:Connect(function(dt)

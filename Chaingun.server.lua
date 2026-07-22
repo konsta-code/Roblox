@@ -19,6 +19,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
 
 local Constants = require(ReplicatedStorage.Modules.ChaingunConstants)
 local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
@@ -32,6 +33,29 @@ local chainStartTime: { [Player]: number } = {}
 local heat: { [Player]: number } = {}
 local lastHeatUpdateTime: { [Player]: number } = {}
 local overheatUntil: { [Player]: number } = {}
+
+local function playWorldShot(root: BasePart, profile: ClassKitConstants.AutomaticProfile)
+	local sound = Instance.new("Sound")
+	sound.Name = "AutomaticWorldShot"
+	sound.SoundId = "rbxasset://sounds/collide.wav"
+	local shotWeight = math.clamp(profile.damagePerHit / 45 + (profile.pellets or 1) * 0.035, 0.18, 1)
+	sound.Volume = 0.07 + shotWeight * 0.08
+	sound.PlaybackSpeed = (1.52 - shotWeight * 0.46) * (0.97 + math.random() * 0.06)
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMinDistance = 7
+	sound.RollOffMaxDistance = 145 + shotWeight * 65
+	local equalizer = Instance.new("EqualizerSoundEffect")
+	equalizer.LowGain = shotWeight * 4
+	equalizer.MidGain = 1
+	equalizer.HighGain = -2
+	equalizer.Parent = sound
+	local drive = Instance.new("DistortionSoundEffect")
+	drive.Level = 0.08 + shotWeight * 0.10
+	drive.Parent = sound
+	sound.Parent = root
+	sound:Play()
+	Debris:AddItem(sound, 1.5)
+end
 
 local function getCurrentHeat(player: Player, now: number, profile: ClassKitConstants.AutomaticProfile): number
 	local last = lastHeatUpdateTime[player] or now
@@ -123,6 +147,7 @@ local function tryFire(player: Player, direction: any)
 	heat[player] = newHeat
 	lastHeatUpdateTime[player] = now
 
+	playWorldShot(root, profile)
 	validateAndApplyDamage(player, origin, direction, profile)
 end
 

@@ -14,6 +14,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
 local ChaingunConstants = require(ReplicatedStorage.Modules.ChaingunConstants)
@@ -28,19 +29,94 @@ local firingStartedAt = 0
 local localHeat = 0
 local localOverheatUntil = 0
 
+local lastImpactSound = 0
+
+local function showImpact(position: Vector3, normal: Vector3, color: Color3, material: Enum.Material)
+	local anchor = Instance.new("Part")
+	anchor.Name = "BallisticImpact"
+	anchor.Size = Vector3.one * 0.12
+	anchor.CFrame = CFrame.lookAt(position + normal * 0.025, position + normal)
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Parent = workspace
+
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = anchor
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.55), color)
+	sparks.LightEmission = 0.8
+	sparks.Lifetime = NumberRange.new(0.07, 0.20)
+	sparks.Speed = NumberRange.new(7, 18)
+	sparks.Drag = 5
+	sparks.SpreadAngle = Vector2.new(42, 42)
+	sparks.EmissionDirection = Enum.NormalId.Front
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.09),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	sparks.Parent = attachment
+	sparks:Emit(if material == Enum.Material.Metal then 8 else 5)
+
+	local scorch = Instance.new("Part")
+	scorch.Name = "ImpactFlash"
+	scorch.Shape = Enum.PartType.Ball
+	scorch.Size = Vector3.one * 0.22
+	scorch.Position = position + normal * 0.03
+	scorch.Anchored = true
+	scorch.CanCollide = false
+	scorch.CanQuery = false
+	scorch.CanTouch = false
+	scorch.Material = Enum.Material.Neon
+	scorch.Color = color
+	scorch.Transparency = 0.16
+	scorch.Parent = workspace
+	TweenService:Create(scorch, TweenInfo.new(0.09), { Size = Vector3.one * 0.55, Transparency = 1 }):Play()
+	Debris:AddItem(scorch, 0.12)
+
+	if os.clock() - lastImpactSound > 0.055 then
+		lastImpactSound = os.clock()
+		local hitSound = Instance.new("Sound")
+		hitSound.SoundId = "rbxasset://sounds/collide.wav"
+		hitSound.Volume = 0.055
+		hitSound.PlaybackSpeed = (if material == Enum.Material.Metal then 1.55 else 0.92) * (0.94 + math.random() * 0.12)
+		hitSound.RollOffMinDistance = 4
+		hitSound.RollOffMaxDistance = 85
+		hitSound.Parent = anchor
+		hitSound:Play()
+	end
+	Debris:AddItem(anchor, 1.2)
+end
+
 local function drawTracer(origin: Vector3, endPoint: Vector3, color: Color3, width: number)
 	local distance = (endPoint - origin).Magnitude
+	if distance <= 0.05 then return end
+	local direction = (endPoint - origin).Unit
+	-- A ballistic streak is a short moving segment, not a solid laser spanning
+	-- the whole ray. Longer shots leave a slightly longer readable segment.
+	local visibleLength = math.min(distance, 14 + distance * 0.07)
+	local center = endPoint - direction * visibleLength * 0.5
 	local tracer = Instance.new("Part")
+	tracer.Name = "BallisticTracer"
 	tracer.Anchored = true
 	tracer.CanCollide = false
 	tracer.CanQuery = false
+	tracer.CanTouch = false
 	tracer.Material = Enum.Material.Neon
-	tracer.Color = color
-	tracer.Size = Vector3.new(width, width, distance)
-	tracer.CFrame = CFrame.new(origin, endPoint) * CFrame.new(0, 0, -distance / 2)
+	tracer.Color = color:Lerp(Color3.new(1, 1, 1), 0.28)
+	tracer.Transparency = 0.08
+	tracer.Size = Vector3.new(math.max(0.035, width * 0.58), math.max(0.035, width * 0.58), visibleLength)
+	tracer.CFrame = CFrame.new(center, endPoint)
 	tracer.Parent = workspace
-
-	Debris:AddItem(tracer, 0.05)
+	TweenService:Create(tracer, TweenInfo.new(0.075, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Transparency = 1,
+		Size = Vector3.new(0.01, 0.01, visibleLength * 0.72),
+	}):Play()
+	Debris:AddItem(tracer, 0.09)
 end
 
 local function fireOnce(profile: ClassKitConstants.AutomaticProfile)
@@ -64,6 +140,10 @@ local function fireOnce(profile: ClassKitConstants.AutomaticProfile)
 		local result = workspace:Raycast(origin, shotDirection * profile.maxRange, rayParams)
 		local endPoint = result and result.Position or (origin + shotDirection * profile.maxRange)
 		drawTracer(origin, endPoint, profile.tracerColor, profile.tracerWidth or 0.15)
+		if result then
+			local surfaceColor = if result.Instance:IsA("BasePart") then result.Instance.Color else profile.tracerColor
+			showImpact(result.Position, result.Normal, surfaceColor:Lerp(profile.tracerColor, 0.28), result.Material)
+		end
 	end
 	fireEvent:FireServer(direction)
 	WeaponFeedback.Fire("Chaingun")
