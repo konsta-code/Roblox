@@ -70,19 +70,23 @@ end
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton2 then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if player:GetAttribute("EquippedWeapon") ~= "Chaingun" then return end
 	isFiring = true
 	fireStartTime = os.clock()
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		isFiring = false
 	end
 end)
 
 RunService.Heartbeat:Connect(function()
-	if not isFiring then return end
+	if not isFiring or player:GetAttribute("EquippedWeapon") ~= "Chaingun" then
+		isFiring = false
+		return
+	end
 
 	local now = os.clock()
 	local spinProgress = math.clamp((now - fireStartTime) / Constants.SPIN_UP_TIME, 0, 1)

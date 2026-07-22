@@ -47,6 +47,7 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed or input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if player:GetAttribute("EquippedWeapon") ~= "Spinfusor" then return end
 
 	local now = os.clock()
 	if now - lastFireTime < Constants.FIRE_COOLDOWN then return end

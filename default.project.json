@@ -43,6 +43,7 @@
       "StarterPlayerScripts": {
         "SkiController": { "$path": "SkiController.client.lua" },
         "HudController": { "$path": "HudController.client.lua" },
+        "WeaponSelector": { "$path": "WeaponSelector.client.lua" },
         "Chaingun": { "$path": "Chaingun.client.lua" },
         "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" },
         "WeaponViewmodel": { "$path": "WeaponViewmodel.client.lua" }
