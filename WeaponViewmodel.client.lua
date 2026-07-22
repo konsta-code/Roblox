@@ -232,6 +232,7 @@ local function createImportedSpinfusor(): ViewModel?
 	end
 
 	local model, root = createRoot("SpinfusorViewmodel")
+	model:SetAttribute("UsesImportedMesh", true)
 	local imported = template:Clone()
 	imported.Name = "ImportedSpinfusor"
 	imported.Parent = model
@@ -495,8 +496,10 @@ local automaticAccessories = {
 	Doombringer = { "ChainHousing", Vector3.new(1.38, 0.38, 1.7), CFrame.new(0, 0.58, -0.45), nil },
 }
 
-for className, definition in discAccessories do
-	addClassAccessory(spinfusor, className, definition[1], definition[2], definition[3], definition[4])
+if not spinfusor.model:GetAttribute("UsesImportedMesh") then
+	for className, definition in discAccessories do
+		addClassAccessory(spinfusor, className, definition[1], definition[2], definition[3], definition[4])
+	end
 end
 for className, definition in automaticAccessories do
 	addClassAccessory(chaingun, className, definition[1], definition[2], definition[3], definition[4])
