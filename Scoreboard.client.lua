@@ -39,21 +39,46 @@ root.Size = UDim2.fromOffset(900, 440)
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.45)
 root.BackgroundColor3 = Color3.fromRGB(10, 14, 20)
-root.BackgroundTransparency = 0.14
+root.BackgroundTransparency = 0.08
 root.BorderSizePixel = 0
 root.Parent = gui
+local rootScale = Instance.new("UIScale")
+rootScale.Parent = root
 
 local rootCorner = Instance.new("UICorner")
-rootCorner.CornerRadius = UDim.new(0, 12)
+rootCorner.CornerRadius = UDim.new(0, 3)
 rootCorner.Parent = root
+local rootStroke = Instance.new("UIStroke")
+rootStroke.Color = Color3.fromRGB(89, 196, 226)
+rootStroke.Thickness = 1
+rootStroke.Transparency = 0.26
+rootStroke.Parent = root
+local rootGradient = Instance.new("UIGradient")
+rootGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 24, 35)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(8, 13, 20)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(31, 7, 8)),
+})
+rootGradient.Rotation = 0
+rootGradient.Parent = root
+
+for index = 1, 9 do
+	local scanline = Instance.new("Frame")
+	scanline.Size = UDim2.new(1, -16, 0, 1)
+	scanline.Position = UDim2.new(0, 8, index / 10, 0)
+	scanline.BackgroundColor3 = Color3.fromRGB(130, 190, 210)
+	scanline.BackgroundTransparency = 0.94
+	scanline.BorderSizePixel = 0
+	scanline.Parent = root
+end
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBlack
+title.Font = Enum.Font.RobotoMono
 title.TextSize = 20
 title.TextColor3 = Color3.fromRGB(235, 242, 252)
-title.Text = "CAPTURE THE FLAG"
+title.Text = "TITAN WARLINK // COMBAT LEDGER"
 title.Parent = root
 
 type ColumnParts = { frame: Frame, header: TextLabel, list: Frame }
@@ -63,19 +88,24 @@ local function makeColumn(teamName: string, xScale: number, color: Color3): Colu
 	frame.Size = UDim2.new(0.5, -24, 1, -64)
 	frame.Position = UDim2.new(xScale, 16, 0, 48)
 	frame.BackgroundColor3 = Color3.fromRGB(16, 21, 30)
-	frame.BackgroundTransparency = 0.15
+	frame.BackgroundTransparency = 0.12
 	frame.BorderSizePixel = 0
 	frame.Parent = root
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0, 2)
 	corner.Parent = frame
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = 1
+	stroke.Transparency = 0.48
+	stroke.Parent = frame
 
 	local header = Instance.new("TextLabel")
 	header.Size = UDim2.new(1, -16, 0, 34)
 	header.Position = UDim2.fromOffset(8, 4)
 	header.BackgroundTransparency = 1
-	header.Font = Enum.Font.GothamBold
+	header.Font = Enum.Font.RobotoMono
 	header.TextSize = 17
 	header.TextColor3 = color
 	header.TextXAlignment = Enum.TextXAlignment.Left
@@ -86,7 +116,7 @@ local function makeColumn(teamName: string, xScale: number, color: Color3): Colu
 	legend.Size = UDim2.new(1, -16, 0, 16)
 	legend.Position = UDim2.fromOffset(8, 38)
 	legend.BackgroundTransparency = 1
-	legend.Font = Enum.Font.Gotham
+	legend.Font = Enum.Font.RobotoMono
 	legend.TextSize = 11
 	legend.TextColor3 = Color3.fromRGB(150, 162, 178)
 	legend.TextXAlignment = Enum.TextXAlignment.Left
@@ -108,8 +138,8 @@ local function makeColumn(teamName: string, xScale: number, color: Color3): Colu
 end
 
 local columns: { [string]: ColumnParts } = {
-	Red = makeColumn("Red", 0, Color3.fromRGB(255, 110, 100)),
-	Blue = makeColumn("Blue", 0.5, Color3.fromRGB(110, 160, 255)),
+	Blue = makeColumn("Cryo Revenant", 0, Color3.fromRGB(78, 216, 255)),
+	Red = makeColumn("Ember Brood", 0.5, Color3.fromRGB(255, 91, 53)),
 }
 
 local function statValue(p: Player, name: string): number
@@ -145,15 +175,15 @@ local function refresh()
 		title.Text = if typeof(mvp) == "string" then "MATCH RESULT // MVP " .. string.upper(mvp) else "MATCH RESULT"
 		title.TextColor3 = Color3.fromRGB(112, 244, 185)
 	else
-		title.Text = "CAPTURE THE FLAG"
+		title.Text = "TITAN WARLINK // COMBAT LEDGER"
 		title.TextColor3 = Color3.fromRGB(235, 242, 252)
 	end
 	for teamName, column in columns do
 		local team = Teams:FindFirstChild(teamName)
 		local score = ReplicatedStorage:GetAttribute("CTFScore_" .. teamName)
 		column.header.Text = string.format(
-			"%s   —   %d FLAGGEN",
-			string.upper(teamName),
+			"%s   //   %d CORES",
+			if teamName == "Blue" then "CRYO REVENANT" else "EMBER BROOD",
 			typeof(score) == "number" and score or 0
 		)
 
@@ -193,7 +223,7 @@ local function refresh()
 			row.BackgroundColor3 = Color3.fromRGB(24, 31, 43)
 			row.BackgroundTransparency = info.player == player and 0.2 or 0.5
 			row.BorderSizePixel = 0
-			row.Font = Enum.Font.Gotham
+			row.Font = Enum.Font.RobotoMono
 			row.TextSize = 11
 			row.TextColor3 = Color3.fromRGB(226, 233, 244)
 			row.TextXAlignment = Enum.TextXAlignment.Left
@@ -211,7 +241,7 @@ local function refresh()
 			row.Parent = column.list
 
 			local rowCorner = Instance.new("UICorner")
-			rowCorner.CornerRadius = UDim.new(0, 4)
+			rowCorner.CornerRadius = UDim.new(0, 1)
 			rowCorner.Parent = row
 		end
 	end
@@ -222,6 +252,10 @@ local refreshThread: thread? = nil
 
 local function setVisible(visible: boolean)
 	gui.Enabled = visible
+	local camera = workspace.CurrentCamera
+	if camera then
+		rootScale.Scale = math.clamp(math.min(camera.ViewportSize.X / 1280, camera.ViewportSize.Y / 720), 0.68, 1.08)
+	end
 	if refreshThread then
 		task.cancel(refreshThread)
 		refreshThread = nil

@@ -30,7 +30,84 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MatchHud"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
+screenGui.DisplayOrder = 10
 screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Personal cockpit palette. Blue players see frozen revenant telemetry; red
+-- players see the hotter organic Ember interface.
+local hudAccent = Color3.fromRGB(52, 222, 255)
+local hudBright = Color3.fromRGB(211, 249, 255)
+local hudPanel = Color3.fromRGB(4, 15, 24)
+local hudMuted = Color3.fromRGB(69, 112, 130)
+local hudFaction = "CRYO REVENANT"
+local themeCallbacks: { () -> () } = {}
+
+local function registerTheme(callback: () -> ())
+	table.insert(themeCallbacks, callback)
+	callback()
+end
+
+local function refreshFactionPalette()
+	local ember = player.Team ~= nil and player.Team.TeamColor.Color.R > player.Team.TeamColor.Color.B
+	if ember then
+		hudAccent = Color3.fromRGB(255, 76, 28)
+		hudBright = Color3.fromRGB(255, 225, 208)
+		hudPanel = Color3.fromRGB(22, 5, 8)
+		hudMuted = Color3.fromRGB(136, 61, 48)
+		hudFaction = "EMBER BROOD"
+	else
+		hudAccent = Color3.fromRGB(52, 222, 255)
+		hudBright = Color3.fromRGB(211, 249, 255)
+		hudPanel = Color3.fromRGB(4, 15, 24)
+		hudMuted = Color3.fromRGB(69, 112, 130)
+		hudFaction = "CRYO REVENANT"
+	end
+	for _, callback in themeCallbacks do callback() end
+end
+
+local function addTitanShell(target: GuiObject, transparency: number?)
+	target.BorderSizePixel = 0
+	target.BackgroundTransparency = transparency or 0.16
+	local corner = target:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 3)
+	corner.Parent = target
+	local stroke = Instance.new("UIStroke")
+	stroke.Name = "TitanStroke"
+	stroke.Thickness = 1
+	stroke.Transparency = 0.38
+	stroke.Parent = target
+	local gradient = Instance.new("UIGradient")
+	gradient.Name = "TitanGradient"
+	gradient.Rotation = 90
+	gradient.Parent = target
+	local rail = Instance.new("Frame")
+	rail.Name = "TitanRail"
+	rail.Size = UDim2.new(1, -12, 0, 2)
+	rail.Position = UDim2.fromOffset(6, 0)
+	rail.BorderSizePixel = 0
+	rail.ZIndex = target.ZIndex + 1
+	rail.Parent = target
+	local node = Instance.new("Frame")
+	node.Name = "TitanNode"
+	node.Size = UDim2.fromOffset(7, 7)
+	node.AnchorPoint = Vector2.new(1, 0)
+	node.Position = UDim2.new(1, -5, 0, 5)
+	node.Rotation = 45
+	node.BorderSizePixel = 0
+	node.ZIndex = target.ZIndex + 2
+	node.Parent = target
+	registerTheme(function()
+		target.BackgroundColor3 = hudPanel
+		stroke.Color = hudAccent
+		rail.BackgroundColor3 = hudAccent
+		node.BackgroundColor3 = hudAccent
+		gradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, hudPanel:Lerp(hudAccent, 0.12)),
+			ColorSequenceKeypoint.new(0.52, hudPanel),
+			ColorSequenceKeypoint.new(1, hudPanel:Lerp(Color3.new(0, 0, 0), 0.22)),
+		})
+	end)
+end
 
 -- === CROSSHAIR ===
 
@@ -65,16 +142,38 @@ vBar.BorderSizePixel = 0
 vBar.Parent = crosshairFrame
 
 local centerDot = Instance.new("Frame")
-centerDot.Size = UDim2.fromOffset(3, 3)
+centerDot.Size = UDim2.fromOffset(6, 6)
 centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
 centerDot.Position = UDim2.fromScale(0.5, 0.5)
-centerDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+centerDot.BackgroundTransparency = 1
 centerDot.BorderSizePixel = 0
 centerDot.Parent = crosshairFrame
 
 local centerCorner = Instance.new("UICorner")
-centerCorner.CornerRadius = UDim.new(1, 0)
+centerCorner.CornerRadius = UDim.new(0, 1)
 centerCorner.Parent = centerDot
+local centerStroke = Instance.new("UIStroke")
+centerStroke.Thickness = 1.5
+centerStroke.Transparency = 0.05
+centerStroke.Parent = centerDot
+centerDot.Rotation = 45
+registerTheme(function() centerStroke.Color = hudAccent end)
+
+for index, data in {
+	{ UDim2.fromOffset(3, 13), UDim2.new(0.5, -1, 0, 0) },
+	{ UDim2.fromOffset(3, 13), UDim2.new(0.5, -1, 1, -13) },
+	{ UDim2.fromOffset(13, 3), UDim2.new(0, 0, 0.5, -1) },
+	{ UDim2.fromOffset(13, 3), UDim2.new(1, -13, 0.5, -1) },
+} do
+	local tick = Instance.new("Frame")
+	tick.Name = "AimTick" .. index
+	tick.Size = data[1]
+	tick.Position = data[2]
+	tick.BorderSizePixel = 0
+	tick.BackgroundTransparency = 0.18
+	tick.Parent = crosshairFrame
+	registerTheme(function() tick.BackgroundColor3 = hudBright end)
+end
 
 local hitMarker = Instance.new("TextLabel")
 hitMarker.Name = "HitMarker"
@@ -147,6 +246,7 @@ cooldownLabel.Text = "BEREIT"
 cooldownLabel.TextColor3 = Color3.fromRGB(150, 245, 205)
 cooldownLabel.TextSize = 9
 cooldownLabel.Parent = cooldownFrame
+addTitanShell(cooldownFrame, 0.22)
 
 local heatFrame = Instance.new("Frame")
 heatFrame.Name = "AutomaticHeat"
@@ -191,6 +291,7 @@ heatLabel.Text = "HEAT  000%"
 heatLabel.TextColor3 = Color3.fromRGB(145, 220, 255)
 heatLabel.TextSize = 9
 heatLabel.Parent = heatFrame
+addTitanShell(heatFrame, 0.22)
 
 local speedFrame = Instance.new("Frame")
 speedFrame.Name = "SpeedReadout"
@@ -214,6 +315,7 @@ speedLabel.Text = "SPEED  000"
 speedLabel.TextColor3 = Color3.fromRGB(145, 225, 255)
 speedLabel.TextSize = 15
 speedLabel.Parent = speedFrame
+addTitanShell(speedFrame, 0.20)
 
 RunService.RenderStepped:Connect(function()
 	local selected = WeaponState.Get()
@@ -221,18 +323,20 @@ RunService.RenderStepped:Connect(function()
 	local elapsed = os.clock() - startedAt
 	local ratio = if duration <= 0 then 1 else math.clamp(elapsed / duration, 0, 1)
 	local ready = ratio >= 1
+	local kit = ClassKitConstants.Get(player:GetAttribute("Loadout"))
+	local weaponName = if selected == "Spinfusor" then kit.disc.name else kit.automatic.name
 
 	cooldownFrame.Visible = player:GetAttribute("LoadoutMenuOpen") ~= true
 	cooldownFill.Size = UDim2.fromScale(ratio, 1)
 	cooldownFill.BackgroundColor3 = if ready
-		then Color3.fromRGB(80, 225, 165)
+		then hudAccent
 		else Color3.fromRGB(255, 174, 68)
 	cooldownLabel.TextColor3 = if ready
-		then Color3.fromRGB(150, 245, 205)
+		then hudBright
 		else Color3.fromRGB(255, 208, 125)
 	cooldownLabel.Text = if ready
-		then "BEREIT"
-		else string.format("LÄDT  %.1fs", math.max(0, duration - elapsed))
+		then string.upper(weaponName) .. " // READY"
+		else string.format("RECHARGE // %.1fs", math.max(0, duration - elapsed))
 
 	local heat, lockedUntil = WeaponState.GetAutomaticHeat()
 	local overheated = lockedUntil > os.clock()
@@ -244,141 +348,204 @@ RunService.RenderStepped:Connect(function()
 	heatLabel.TextColor3 = if overheated then Color3.fromRGB(255, 105, 75) else heatFill.BackgroundColor3
 
 	local crosshairColor = if ready
-		then Color3.fromRGB(235, 250, 255)
+		then hudBright
 		else Color3.fromRGB(255, 170, 70)
 	hBar.BackgroundColor3 = crosshairColor
 	vBar.BackgroundColor3 = crosshairColor
-	centerDot.BackgroundColor3 = if ready
-		then Color3.fromRGB(80, 225, 165)
-		else Color3.fromRGB(255, 120, 65)
+	centerStroke.Color = if ready then hudAccent else Color3.fromRGB(255, 120, 65)
 
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local speed = if root and root:IsA("BasePart") then root.AssemblyLinearVelocity.Magnitude else 0
 	local speedRatio = math.clamp((speed - 30) / 150, 0, 1)
-	speedLabel.Text = string.format("SPEED  %03d", math.floor(speed + 0.5))
-	speedLabel.TextColor3 = Color3.fromRGB(120, 220, 255):Lerp(Color3.fromRGB(255, 178, 72), speedRatio)
+	speedLabel.Text = string.format("VELOCITY // %03d", math.floor(speed + 0.5))
+	speedLabel.TextColor3 = hudAccent:Lerp(Color3.fromRGB(255, 178, 72), speedRatio)
 	speedFrame.BackgroundTransparency = 0.35 - speedRatio * 0.16
 end)
 
 -- === Health / Jetpack Bars ===
 
-local function makeBar(anchorPoint: Vector2, position: UDim2, fillColor: Color3): (Frame, TextLabel)
+local function makeBar(name: string, anchorPoint: Vector2, position: UDim2, fillColor: Color3): (Frame, TextLabel)
 	local container = Instance.new("Frame")
-	container.Size = UDim2.fromOffset(220, 46)
+	container.Name = name .. "Telemetry"
+	container.Size = UDim2.fromOffset(270, 62)
 	container.AnchorPoint = anchorPoint
 	container.Position = position
-	container.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-	container.BackgroundTransparency = 0.25
-	container.BorderSizePixel = 0
 	container.Parent = screenGui
+	addTitanShell(container, 0.13)
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = container
+	local system = Instance.new("TextLabel")
+	system.Size = UDim2.new(1, -18, 0, 13)
+	system.Position = UDim2.fromOffset(9, 5)
+	system.BackgroundTransparency = 1
+	system.Font = Enum.Font.RobotoMono
+	system.Text = hudFaction .. " // " .. name
+	system.TextSize = 9
+	system.TextXAlignment = Enum.TextXAlignment.Left
+	system.Parent = container
+	registerTheme(function()
+		system.Text = hudFaction .. " // " .. name
+		system.TextColor3 = hudMuted:Lerp(hudBright, 0.35)
+	end)
 
 	local track = Instance.new("Frame")
-	track.Size = UDim2.new(1, -16, 0, 10)
-	track.Position = UDim2.fromOffset(8, 30)
-	track.BackgroundColor3 = Color3.fromRGB(40, 40, 46)
+	track.Size = UDim2.new(1, -18, 0, 13)
+	track.Position = UDim2.fromOffset(9, 40)
+	track.BackgroundColor3 = Color3.fromRGB(23, 31, 39)
 	track.BorderSizePixel = 0
+	track.ClipsDescendants = true
 	track.Parent = container
-
-	local trackCorner = Instance.new("UICorner")
-	trackCorner.CornerRadius = UDim.new(1, 0)
-	trackCorner.Parent = track
 
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.new(1, 0, 1, 0)
 	fill.BackgroundColor3 = fillColor
 	fill.BorderSizePixel = 0
 	fill.Parent = track
+	local fillGradient = Instance.new("UIGradient")
+	fillGradient.Color = ColorSequence.new(fillColor:Lerp(Color3.new(1, 1, 1), 0.32), fillColor)
+	fillGradient.Parent = fill
+	if name == "THRUST" then
+		registerTheme(function()
+			fill.BackgroundColor3 = hudAccent
+			fillGradient.Color = ColorSequence.new(hudBright, hudAccent)
+		end)
+	end
 
-	local fillCorner = Instance.new("UICorner")
-	fillCorner.CornerRadius = UDim.new(1, 0)
-	fillCorner.Parent = fill
+	for index = 1, 11 do
+		local divider = Instance.new("Frame")
+		divider.Name = "Segment" .. index
+		divider.Size = UDim2.fromOffset(1, 13)
+		divider.Position = UDim2.new(index / 12, 0, 0, 0)
+		divider.BackgroundColor3 = hudPanel
+		divider.BackgroundTransparency = 0.18
+		divider.BorderSizePixel = 0
+		divider.ZIndex = track.ZIndex + 3
+		divider.Parent = track
+		registerTheme(function() divider.BackgroundColor3 = hudPanel end)
+	end
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -16, 0, 18)
-	label.Position = UDim2.fromOffset(8, 4)
+	label.Size = UDim2.new(1, -18, 0, 20)
+	label.Position = UDim2.fromOffset(9, 18)
 	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 14
-	label.TextColor3 = Color3.fromRGB(235, 235, 240)
+	label.Font = Enum.Font.GothamBlack
+	label.TextSize = 15
+	label.TextColor3 = Color3.fromRGB(235, 242, 248)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = container
 
 	return fill, label
 end
 
-local healthFill, healthLabel = makeBar(Vector2.new(0, 1), UDim2.new(0, 24, 1, -24), Color3.fromRGB(220, 70, 70))
-healthLabel.Text = "HEALTH"
+local healthFill, healthLabel = makeBar("VITALS", Vector2.new(0, 1), UDim2.new(0, 24, 1, -24), Color3.fromRGB(234, 67, 62))
+healthLabel.Text = "VITAL INTEGRITY // 100"
 
-local jetpackFill, jetpackLabel = makeBar(Vector2.new(1, 1), UDim2.new(1, -24, 1, -24), Color3.fromRGB(70, 170, 220))
-jetpackLabel.Text = "JETPACK"
+local jetpackFill, jetpackLabel = makeBar("THRUST", Vector2.new(1, 1), UDim2.new(1, -24, 1, -24), hudAccent)
+jetpackLabel.Text = "THRUST RESERVE // 100"
+registerTheme(function()
+	healthLabel.TextColor3 = hudBright
+	jetpackLabel.TextColor3 = hudBright
+end)
 
 local equipmentLabel = Instance.new("TextLabel")
-equipmentLabel.Size = UDim2.fromOffset(540, 24)
+equipmentLabel.Name = "CombatDock"
+equipmentLabel.Size = UDim2.fromOffset(660, 52)
 equipmentLabel.AnchorPoint = Vector2.new(0.5, 1)
-equipmentLabel.Position = UDim2.new(0.5, 0, 1, -46)
-equipmentLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-equipmentLabel.BackgroundTransparency = 0.35
-equipmentLabel.BorderSizePixel = 0
-equipmentLabel.Font = Enum.Font.GothamBold
-equipmentLabel.TextSize = 13
-equipmentLabel.TextColor3 = Color3.fromRGB(225, 225, 235)
+equipmentLabel.Position = UDim2.new(0.5, 0, 1, -18)
+equipmentLabel.Font = Enum.Font.RobotoMono
+equipmentLabel.TextSize = 11
+equipmentLabel.TextWrapped = true
+equipmentLabel.TextColor3 = Color3.fromRGB(225, 235, 243)
 equipmentLabel.Parent = screenGui
-
-local equipmentCorner = Instance.new("UICorner")
-equipmentCorner.CornerRadius = UDim.new(0, 6)
-equipmentCorner.Parent = equipmentLabel
+addTitanShell(equipmentLabel, 0.14)
+registerTheme(function() equipmentLabel.TextColor3 = hudBright:Lerp(Color3.fromRGB(225, 235, 243), 0.35) end)
 
 local isCarryingFlag = false
 local function refreshEquipment()
 	local grenades = player:GetAttribute("Grenades")
-	local grenadeName = string.upper(ClassKitConstants.Get(player:GetAttribute("Loadout")).grenade.name)
+	local kit = ClassKitConstants.Get(player:GetAttribute("Loadout"))
+	local grenadeName = string.upper(kit.grenade.name)
+	local selected = WeaponState.Get()
+	local discMark = if selected == "Spinfusor" then "◆" else "◇"
+	local automaticMark = if selected == "Chaingun" then "◆" else "◇"
 	equipmentLabel.Text = string.format(
-		"[G] %s x%d   [F] MELEE   [V/MMB] PING%s",
+		"%s [1] %s    //    %s [2] %s\n[G] %s ×%d    [F] MELEE    [V] PING%s",
+		discMark,
+		string.upper(kit.disc.name),
+		automaticMark,
+		string.upper(kit.automatic.name),
 		grenadeName,
 		typeof(grenades) == "number" and grenades or 0,
-		if isCarryingFlag then "   [Z] FLAG PUNT" else ""
+		if isCarryingFlag then "    [Z] FLAG PUNT" else ""
 	)
 end
 
 player:GetAttributeChangedSignal("Grenades"):Connect(refreshEquipment)
 player:GetAttributeChangedSignal("Loadout"):Connect(refreshEquipment)
+WeaponState.Changed:Connect(refreshEquipment)
 refreshEquipment()
 
 -- === Score ===
 
 local scoreFrame = Instance.new("Frame")
-scoreFrame.Size = UDim2.fromOffset(260, 64)
+scoreFrame.Name = "TitanScoreCore"
+scoreFrame.Size = UDim2.fromOffset(354, 82)
 scoreFrame.AnchorPoint = Vector2.new(0.5, 0)
-scoreFrame.Position = UDim2.new(0.5, 0, 0, 20)
+scoreFrame.Position = UDim2.new(0.5, 0, 0, 14)
 scoreFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 scoreFrame.BackgroundTransparency = 0.25
 scoreFrame.BorderSizePixel = 0
 scoreFrame.Parent = screenGui
 
 local scoreCorner = Instance.new("UICorner")
-scoreCorner.CornerRadius = UDim.new(0, 8)
+scoreCorner.CornerRadius = UDim.new(0, 3)
 scoreCorner.Parent = scoreFrame
+addTitanShell(scoreFrame, 0.10)
+
+local modeLabel = Instance.new("TextLabel")
+modeLabel.Size = UDim2.new(1, -20, 0, 13)
+modeLabel.Position = UDim2.fromOffset(10, 5)
+modeLabel.BackgroundTransparency = 1
+modeLabel.Font = Enum.Font.RobotoMono
+modeLabel.Text = "TITAN CORE // CAPTURE PROTOCOL"
+modeLabel.TextColor3 = Color3.fromRGB(128, 151, 171)
+modeLabel.TextSize = 9
+modeLabel.Parent = scoreFrame
+
+local blueTeamTag = Instance.new("TextLabel")
+blueTeamTag.Size = UDim2.fromOffset(95, 20)
+blueTeamTag.Position = UDim2.fromOffset(12, 27)
+blueTeamTag.BackgroundTransparency = 1
+blueTeamTag.Font = Enum.Font.GothamBlack
+blueTeamTag.Text = "CRYO"
+blueTeamTag.TextColor3 = Color3.fromRGB(65, 214, 255)
+blueTeamTag.TextSize = 11
+blueTeamTag.TextXAlignment = Enum.TextXAlignment.Left
+blueTeamTag.Parent = scoreFrame
+
+local redTeamTag = blueTeamTag:Clone()
+redTeamTag.Position = UDim2.new(1, -107, 0, 27)
+redTeamTag.Text = "EMBER"
+redTeamTag.TextColor3 = Color3.fromRGB(255, 86, 43)
+redTeamTag.TextXAlignment = Enum.TextXAlignment.Right
+redTeamTag.Parent = scoreFrame
 
 local scoreLabel = Instance.new("TextLabel")
-scoreLabel.Size = UDim2.new(1, 0, 0, 40)
+scoreLabel.Size = UDim2.new(1, 0, 0, 38)
+scoreLabel.Position = UDim2.fromOffset(0, 17)
 scoreLabel.BackgroundTransparency = 1
-scoreLabel.Font = Enum.Font.GothamBold
-scoreLabel.TextSize = 20
+scoreLabel.Font = Enum.Font.GothamBlack
+scoreLabel.TextSize = 24
 scoreLabel.TextColor3 = Color3.fromRGB(235, 235, 240)
 scoreLabel.Text = "0  --  0"
 scoreLabel.Parent = scoreFrame
 
 local phaseLabel = Instance.new("TextLabel")
-phaseLabel.Size = UDim2.new(1, 0, 0, 20)
-phaseLabel.Position = UDim2.new(0, 0, 0, 40)
+phaseLabel.Size = UDim2.new(1, -20, 0, 19)
+phaseLabel.Position = UDim2.fromOffset(10, 58)
 phaseLabel.BackgroundTransparency = 1
-phaseLabel.Font = Enum.Font.Gotham
-phaseLabel.TextSize = 13
+phaseLabel.Font = Enum.Font.RobotoMono
+phaseLabel.TextSize = 10
 phaseLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
 phaseLabel.Text = "Aufwaermphase"
 phaseLabel.Parent = scoreFrame
@@ -386,19 +553,24 @@ phaseLabel.Parent = scoreFrame
 local carryBanner = Instance.new("TextLabel")
 carryBanner.Size = UDim2.fromOffset(320, 34)
 carryBanner.AnchorPoint = Vector2.new(0.5, 0)
-carryBanner.Position = UDim2.new(0.5, 0, 0, 92)
-carryBanner.BackgroundColor3 = Color3.fromRGB(230, 200, 60)
+carryBanner.Position = UDim2.new(0.5, 0, 0, 104)
+carryBanner.BackgroundColor3 = Color3.fromRGB(38, 29, 5)
 carryBanner.BorderSizePixel = 0
 carryBanner.Font = Enum.Font.GothamBold
 carryBanner.TextSize = 16
-carryBanner.TextColor3 = Color3.fromRGB(20, 20, 20)
-carryBanner.Text = "DU TRAEGST DIE FLAGGE"
+carryBanner.TextColor3 = Color3.fromRGB(255, 218, 81)
+carryBanner.Text = "FLAG CORE ACQUIRED // [Z] PUNT"
 carryBanner.Visible = false
 carryBanner.Parent = screenGui
 
 local carryCorner = Instance.new("UICorner")
 carryCorner.CornerRadius = UDim.new(0, 8)
 carryCorner.Parent = carryBanner
+local carryStroke = Instance.new("UIStroke")
+carryStroke.Color = Color3.fromRGB(255, 205, 62)
+carryStroke.Thickness = 1
+carryStroke.Transparency = 0.2
+carryStroke.Parent = carryBanner
 
 local winnerOverlay = Instance.new("TextLabel")
 winnerOverlay.Size = UDim2.fromOffset(620, 112)
@@ -506,17 +678,7 @@ feedLayout.Parent = combatFeed
 local scores: { [string]: number } = {}
 
 local function refreshScoreLabel()
-	local names = {}
-	for name in scores do
-		table.insert(names, name)
-	end
-	table.sort(names)
-
-	if #names >= 2 then
-		scoreLabel.Text = string.format("%s %d  --  %d %s", names[1], scores[names[1]], scores[names[2]], names[2])
-	elseif #names == 1 then
-		scoreLabel.Text = string.format("%s %d", names[1], scores[names[1]])
-	end
+	scoreLabel.Text = string.format("%02d    ◇    %02d", scores.Blue or 0, scores.Red or 0)
 end
 
 local function syncTeamScore(teamName: string)
@@ -838,6 +1000,8 @@ PlayerHudState.JetpackEnergyChanged:Connect(function(energy: number)
 	local maxEnergy = player:GetAttribute("MaxEnergy")
 	local ratio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
 	jetpackFill.Size = UDim2.new(ratio, 0, 1, 0)
+	jetpackLabel.Text = string.format("THRUST RESERVE // %03d", math.floor(ratio * 100 + 0.5))
+	jetpackLabel.TextColor3 = if ratio <= 0.18 then Color3.fromRGB(255, 104, 58) else hudBright
 end)
 
 local function bindHealth(character: Model)
@@ -853,6 +1017,8 @@ local function bindHealth(character: Model)
 		lastHealth = humanoid.Health
 		local ratio = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
 		TweenService:Create(healthFill, TweenInfo.new(0.15), { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
+		healthLabel.Text = string.format("VITAL INTEGRITY // %03d", math.floor(ratio * 100 + 0.5))
+		healthLabel.TextColor3 = if ratio <= 0.25 then Color3.fromRGB(255, 88, 58) else hudBright
 	end
 
 	humanoid.HealthChanged:Connect(updateHealth)
@@ -891,6 +1057,9 @@ navCompassStroke.Color = Color3.fromRGB(86, 112, 142)
 navCompassStroke.Transparency = 0.55
 navCompassStroke.Thickness = 1
 navCompassStroke.Parent = navCompass
+local navGradient = Instance.new("UIGradient")
+navGradient.Rotation = 90
+navGradient.Parent = navCompass
 
 local navHeading = Instance.new("TextLabel")
 navHeading.Name = "Heading"
@@ -954,6 +1123,12 @@ navPointer.TextColor3 = Color3.fromRGB(89, 221, 255)
 navPointer.TextSize = 11
 navPointer.ZIndex = 4
 navPointer.Parent = navCompass
+registerTheme(function()
+	navCompass.BackgroundColor3 = hudPanel
+	navHeading.TextColor3 = hudAccent
+	navPointer.TextColor3 = hudAccent
+	navGradient.Color = ColorSequence.new(hudPanel:Lerp(hudAccent, 0.12), hudPanel)
+end)
 
 local navZoneFrame = Instance.new("Frame")
 navZoneFrame.Name = "TitanZone"
@@ -1187,3 +1362,40 @@ RunService.RenderStepped:Connect(function(dt)
 		spawnShieldLabel.Text = string.format("SPAWN-SCHILD // %.1fs // FEUERN BEENDET SCHUTZ", protectionRemaining)
 	end
 end)
+
+-- Preserve the cockpit hierarchy on laptop and ultrawide resolutions without
+-- changing gameplay-space positions or the crosshair recoil scale.
+local responsiveScales: { UIScale } = {}
+for _, panel in {
+	cooldownFrame,
+	heatFrame,
+	speedFrame,
+	healthFill.Parent.Parent,
+	jetpackFill.Parent.Parent,
+	equipmentLabel,
+	scoreFrame,
+	carryBanner,
+	navCompass,
+	navZoneFrame,
+	spawnShieldFrame,
+} do
+	local scale = Instance.new("UIScale")
+	scale.Name = "ResponsiveScale"
+	scale.Parent = panel
+	table.insert(responsiveScales, scale)
+end
+
+local lastViewport = Vector2.zero
+RunService.Heartbeat:Connect(function()
+	local camera = workspace.CurrentCamera
+	if not camera or camera.ViewportSize == lastViewport then return end
+	lastViewport = camera.ViewportSize
+	local scaleValue = math.clamp(math.min(lastViewport.X / 1536, lastViewport.Y / 864), 0.72, 1.08)
+	for _, scale in responsiveScales do scale.Scale = scaleValue end
+end)
+
+player:GetPropertyChangedSignal("Team"):Connect(function()
+	refreshFactionPalette()
+	refreshEquipment()
+end)
+refreshFactionPalette()

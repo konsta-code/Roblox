@@ -20,24 +20,67 @@ gui.DisplayOrder = 20
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(250, 88)
+frame.Name = "CoreNetwork"
+frame.Size = UDim2.fromOffset(286, 112)
 frame.AnchorPoint = Vector2.new(0, 0.5)
 frame.Position = UDim2.new(0, 18, 0.57, 0)
-frame.BackgroundColor3 = Color3.fromRGB(14, 18, 25)
-frame.BackgroundTransparency = 0.28
+frame.BackgroundColor3 = Color3.fromRGB(4, 13, 21)
+frame.BackgroundTransparency = 0.14
 frame.BorderSizePixel = 0
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 6)
+corner.CornerRadius = UDim.new(0, 3)
 corner.Parent = frame
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Thickness = 1
+frameStroke.Transparency = 0.35
+frameStroke.Parent = frame
+local frameGradient = Instance.new("UIGradient")
+frameGradient.Rotation = 90
+frameGradient.Parent = frame
+local topRail = Instance.new("Frame")
+topRail.Size = UDim2.new(1, -12, 0, 2)
+topRail.Position = UDim2.fromOffset(6, 0)
+topRail.BorderSizePixel = 0
+topRail.Parent = frame
+
+local function refreshShell()
+	local ember = player.Team ~= nil and player.Team.TeamColor.Color.R > player.Team.TeamColor.Color.B
+	local accent = if ember then Color3.fromRGB(255, 76, 28) else Color3.fromRGB(52, 222, 255)
+	local panel = if ember then Color3.fromRGB(22, 5, 8) else Color3.fromRGB(4, 15, 24)
+	frame.BackgroundColor3 = panel
+	frameStroke.Color = accent
+	topRail.BackgroundColor3 = accent
+	frameGradient.Color = ColorSequence.new(panel:Lerp(accent, 0.12), panel)
+end
+player:GetPropertyChangedSignal("Team"):Connect(refreshShell)
+refreshShell()
 
 local layout = Instance.new("UIListLayout")
+local content = Instance.new("Frame")
+content.Name = "CoreRows"
+content.Size = UDim2.new(1, -20, 1, -16)
+content.Position = UDim2.fromOffset(10, 8)
+content.BackgroundTransparency = 1
+content.Parent = frame
 layout.FillDirection = Enum.FillDirection.Vertical
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
-layout.Parent = frame
+layout.Parent = content
+
+local header = Instance.new("TextLabel")
+header.Name = "CoreHeader"
+header.Size = UDim2.fromOffset(266, 14)
+header.BackgroundTransparency = 1
+header.Font = Enum.Font.RobotoMono
+header.Text = "CORE NETWORK // LIVE TELEMETRY"
+header.TextColor3 = Color3.fromRGB(135, 157, 176)
+header.TextSize = 9
+header.TextXAlignment = Enum.TextXAlignment.Left
+header.LayoutOrder = 0
+header.Parent = content
 
 local labels: { [Team]: TextLabel } = {}
 
@@ -55,7 +98,8 @@ local function updateTeam(team: Team)
 		then math.round(health / maxHealth * 100)
 		else 0
 	local status = if not powered then "OFFLINE" elseif percent <= 25 then "CRITICAL" elseif percent <= 60 then "DAMAGED" else "ONLINE"
-	label.Text = string.format("%s GENERATOR // %d%% // %s", string.upper(team.Name), percent, status)
+	local faction = if team.Name == "Blue" then "CRYO CORE" else "EMBER HIVE"
+	label.Text = string.format("%s  //  %03d%%  //  %s", faction, percent, status)
 	label.TextColor3 = if not powered
 		then Color3.fromRGB(255, 90, 80)
 		elseif percent <= 25
@@ -66,15 +110,31 @@ end
 
 for _, team in Teams:GetTeams() do
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromOffset(234, 34)
+	label.Size = UDim2.fromOffset(266, 34)
 	label.BackgroundTransparency = 0.3
 	label.BorderSizePixel = 0
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 11
-	label.Parent = frame
+	label.Font = Enum.Font.RobotoMono
+	label.TextSize = 10
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.LayoutOrder = if team.Name == "Blue" then 1 else 2
+	label.Parent = content
 	local labelCorner = Instance.new("UICorner")
-	labelCorner.CornerRadius = UDim.new(0, 5)
+	labelCorner.CornerRadius = UDim.new(0, 2)
 	labelCorner.Parent = label
+	local labelStroke = Instance.new("UIStroke")
+	labelStroke.Color = team.TeamColor.Color
+	labelStroke.Thickness = 1
+	labelStroke.Transparency = 0.58
+	labelStroke.Parent = label
+	local accentRail = Instance.new("Frame")
+	accentRail.Size = UDim2.fromOffset(3, 24)
+	accentRail.Position = UDim2.fromOffset(5, 5)
+	accentRail.BackgroundColor3 = team.TeamColor.Color
+	accentRail.BorderSizePixel = 0
+	accentRail.Parent = label
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 14)
+	padding.Parent = label
 	labels[team] = label
 
 	for _, prefix in { "GeneratorHealth_", "GeneratorMaxHealth_", "BasePower_" } do

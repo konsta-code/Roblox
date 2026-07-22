@@ -1,4 +1,4 @@
--- Ability input and cooldown HUD. Gameplay effects remain server-authoritative.
+-- Ability input and faction-responsive cooldown telemetry. Gameplay remains server-authoritative.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -14,63 +14,98 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "AbilityHud"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
-gui.DisplayOrder = 5
+gui.DisplayOrder = 10
 gui.Parent = player:WaitForChild("PlayerGui")
 
+local factionAccent = Color3.fromRGB(73, 211, 255)
+local factionPanel = Color3.fromRGB(4, 18, 32)
+
+local function refreshFactionTheme()
+	if player.Team and player.Team.Name == "Red" then
+		factionAccent = Color3.fromRGB(255, 91, 58)
+		factionPanel = Color3.fromRGB(31, 9, 8)
+	else
+		factionAccent = Color3.fromRGB(73, 211, 255)
+		factionPanel = Color3.fromRGB(4, 18, 32)
+	end
+end
+
+refreshFactionTheme()
+
 local panel = Instance.new("Frame")
-panel.Name = "AbilityPanel"
-panel.Size = UDim2.fromOffset(225, 54)
+panel.Name = "WarlinkAbility"
+panel.Size = UDim2.fromOffset(244, 62)
 panel.AnchorPoint = Vector2.new(1, 1)
-panel.Position = UDim2.new(1, -24, 1, -82)
-panel.BackgroundColor3 = Color3.fromRGB(9, 14, 22)
-panel.BackgroundTransparency = 0.18
+panel.Position = UDim2.new(1, -20, 1, -280)
+panel.BackgroundColor3 = factionPanel
+panel.BackgroundTransparency = 0.08
 panel.BorderSizePixel = 0
 panel.Parent = gui
 
 local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 7)
+panelCorner.CornerRadius = UDim.new(0, 3)
 panelCorner.Parent = panel
 
-local accent = Instance.new("Frame")
-accent.Name = "Accent"
-accent.Size = UDim2.fromOffset(4, 54)
-accent.BorderSizePixel = 0
-accent.Parent = panel
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Thickness = 1
+panelStroke.Transparency = 0.2
+panelStroke.Color = factionAccent
+panelStroke.Parent = panel
 
-local accentCorner = Instance.new("UICorner")
-accentCorner.CornerRadius = UDim.new(0, 7)
-accentCorner.Parent = accent
+local panelGradient = Instance.new("UIGradient")
+panelGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 24, 40)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(2, 8, 16)),
+})
+panelGradient.Rotation = 12
+panelGradient.Parent = panel
+
+local rail = Instance.new("Frame")
+rail.Name = "FactionRail"
+rail.Size = UDim2.new(1, 0, 0, 3)
+rail.BackgroundColor3 = factionAccent
+rail.BorderSizePixel = 0
+rail.Parent = panel
+
+local node = Instance.new("Frame")
+node.Name = "WarlinkNode"
+node.Size = UDim2.fromOffset(8, 8)
+node.Position = UDim2.new(1, -15, 0, 9)
+node.Rotation = 45
+node.BackgroundColor3 = factionAccent
+node.BorderSizePixel = 0
+node.Parent = panel
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -16, 0, 20)
-title.Position = UDim2.fromOffset(11, 4)
+title.Size = UDim2.new(1, -34, 0, 18)
+title.Position = UDim2.fromOffset(12, 7)
 title.BackgroundTransparency = 1
-title.Font = Enum.Font.GothamBold
-title.TextSize = 12
+title.Font = Enum.Font.RobotoMono
+title.TextSize = 11
 title.TextColor3 = Color3.fromRGB(238, 245, 255)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = panel
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -16, 0, 15)
-status.Position = UDim2.fromOffset(11, 22)
+status.Size = UDim2.new(1, -24, 0, 14)
+status.Position = UDim2.fromOffset(12, 25)
 status.BackgroundTransparency = 1
-status.Font = Enum.Font.Gotham
-status.TextSize = 10
+status.Font = Enum.Font.RobotoMono
+status.TextSize = 9
 status.TextColor3 = Color3.fromRGB(168, 183, 202)
 status.TextXAlignment = Enum.TextXAlignment.Left
 status.Parent = panel
 
 local track = Instance.new("Frame")
-track.Size = UDim2.new(1, -18, 0, 7)
-track.Position = UDim2.fromOffset(11, 41)
-track.BackgroundColor3 = Color3.fromRGB(36, 45, 58)
+track.Size = UDim2.new(1, -24, 0, 9)
+track.Position = UDim2.fromOffset(12, 44)
+track.BackgroundColor3 = Color3.fromRGB(17, 34, 47)
 track.BorderSizePixel = 0
 track.ClipsDescendants = true
 track.Parent = panel
 
 local trackCorner = Instance.new("UICorner")
-trackCorner.CornerRadius = UDim.new(1, 0)
+trackCorner.CornerRadius = UDim.new(0, 2)
 trackCorner.Parent = track
 
 local fill = Instance.new("Frame")
@@ -79,8 +114,25 @@ fill.BorderSizePixel = 0
 fill.Parent = track
 
 local fillCorner = Instance.new("UICorner")
-fillCorner.CornerRadius = UDim.new(1, 0)
+fillCorner.CornerRadius = UDim.new(0, 2)
 fillCorner.Parent = fill
+
+local dividers: { Frame } = {}
+for index = 1, 5 do
+	local divider = Instance.new("Frame")
+	divider.Name = "Segment" .. index
+	divider.Size = UDim2.fromOffset(2, 9)
+	divider.Position = UDim2.new(index / 6, -1, 0, 0)
+	divider.BackgroundColor3 = factionPanel
+	divider.BackgroundTransparency = 0.15
+	divider.BorderSizePixel = 0
+	divider.ZIndex = 3
+	divider.Parent = track
+	table.insert(dividers, divider)
+end
+
+local scale = Instance.new("UIScale")
+scale.Parent = panel
 
 local function activate(_name: string, inputState: Enum.UserInputState)
 	if inputState ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Sink end
@@ -99,8 +151,12 @@ ContextActionService:SetPosition("ActivateClassAbility", UDim2.new(1, -285, 1, -
 
 activateEvent.OnClientEvent:Connect(function(success: boolean)
 	if success then
-		panel.BackgroundColor3 = Color3.fromRGB(28, 48, 60)
-		TweenService:Create(panel, TweenInfo.new(0.45), { BackgroundColor3 = Color3.fromRGB(9, 14, 22) }):Play()
+		node.Size = UDim2.fromOffset(14, 14)
+		node.BackgroundColor3 = Color3.new(1, 1, 1)
+		TweenService:Create(node, TweenInfo.new(0.32, Enum.EasingStyle.Quad), {
+			Size = UDim2.fromOffset(8, 8),
+			BackgroundColor3 = factionAccent,
+		}):Play()
 	end
 end)
 
@@ -114,21 +170,32 @@ RunService.RenderStepped:Connect(function()
 	local ratio = math.clamp(1 - remaining / definition.cooldown, 0, 1)
 
 	panel.Visible = player:GetAttribute("LoadoutMenuOpen") ~= true
-	accent.BackgroundColor3 = definition.color
+	local camera = workspace.CurrentCamera
+	if camera then
+		scale.Scale = math.clamp(camera.ViewportSize.X / 1500, 0.78, 1)
+	end
+	panel.BackgroundColor3 = factionPanel
+	panelStroke.Color = factionAccent
+	rail.BackgroundColor3 = factionAccent
+	if node.Size.X.Offset == 8 then node.BackgroundColor3 = factionAccent end
+	panelGradient.Color = ColorSequence.new(factionPanel:Lerp(factionAccent, 0.13), factionPanel)
+	for _, divider in dividers do divider.BackgroundColor3 = factionPanel end
 	fill.BackgroundColor3 = definition.color
 	fill.Size = UDim2.fromScale(ratio, 1)
-	title.Text = "[Q]  " .. definition.name
+	title.Text = "Q // " .. string.upper(definition.name) .. " // WARLINK"
 	if silencedUntil > now then
-		status.Text = string.format("EMP BLOCKIERT  %.1fs", silencedUntil - now)
+		status.Text = string.format("SIGNAL JAMMED // %.1fs", silencedUntil - now)
 		status.TextColor3 = Color3.fromRGB(255, 105, 90)
 	elseif activeUntil > now then
-		status.Text = string.format("AKTIV  %.1fs", activeUntil - now)
+		status.Text = string.format("SYSTEM ACTIVE // %.1fs", activeUntil - now)
 		status.TextColor3 = definition.color
 	elseif remaining > 0 then
-		status.Text = string.format("LÄDT  %.1fs", remaining)
+		status.Text = string.format("RECHARGING // %.1fs", remaining)
 		status.TextColor3 = Color3.fromRGB(255, 195, 105)
 	else
-		status.Text = definition.description
+		status.Text = "SYSTEM ARMED // PRESS Q"
 		status.TextColor3 = Color3.fromRGB(168, 183, 202)
 	end
 end)
+
+player:GetPropertyChangedSignal("Team"):Connect(refreshFactionTheme)

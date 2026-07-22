@@ -168,28 +168,38 @@ radarGui.Parent = player:WaitForChild("PlayerGui")
 
 local radar = Instance.new("Frame")
 radar.Name = "Radar"
-radar.Size = UDim2.fromOffset(220, 154)
+radar.Size = UDim2.fromOffset(246, 170)
 radar.AnchorPoint = Vector2.new(1, 1)
-radar.Position = UDim2.new(1, -20, 1, -82)
+radar.Position = UDim2.new(1, -20, 1, -98)
 radar.BackgroundColor3 = Color3.fromRGB(6, 11, 17)
 radar.BackgroundTransparency = 0.14
 radar.BorderSizePixel = 0
 radar.Parent = radarGui
 local radarCorner = Instance.new("UICorner")
-radarCorner.CornerRadius = UDim.new(0, 9)
+radarCorner.CornerRadius = UDim.new(0, 3)
 radarCorner.Parent = radar
 local radarStroke = Instance.new("UIStroke")
 radarStroke.Color = Color3.fromRGB(78, 110, 142)
 radarStroke.Transparency = 0.38
 radarStroke.Thickness = 1
 radarStroke.Parent = radar
+local radarGradient = Instance.new("UIGradient")
+radarGradient.Rotation = 90
+radarGradient.Parent = radar
+local radarRail = Instance.new("Frame")
+radarRail.Size = UDim2.new(1, -12, 0, 2)
+radarRail.Position = UDim2.fromOffset(6, 0)
+radarRail.BorderSizePixel = 0
+radarRail.Parent = radar
+local radarScale = Instance.new("UIScale")
+radarScale.Parent = radar
 
 local radarHeader = Instance.new("TextLabel")
 radarHeader.Size = UDim2.new(1, -12, 0, 25)
 radarHeader.Position = UDim2.fromOffset(6, 1)
 radarHeader.BackgroundTransparency = 1
-radarHeader.Font = Enum.Font.GothamBlack
-radarHeader.Text = "TITAN TACTICAL RADAR   [M]"
+radarHeader.Font = Enum.Font.RobotoMono
+radarHeader.Text = "WARLINK // TACTICAL ARRAY   [M]"
 radarHeader.TextColor3 = Color3.fromRGB(183, 207, 230)
 radarHeader.TextSize = 10
 radarHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -205,8 +215,21 @@ radarMap.BorderSizePixel = 0
 radarMap.ClipsDescendants = true
 radarMap.Parent = radar
 local mapCorner = Instance.new("UICorner")
-mapCorner.CornerRadius = UDim.new(0, 6)
+mapCorner.CornerRadius = UDim.new(0, 2)
 mapCorner.Parent = radarMap
+
+local function refreshRadarTheme()
+	local ember = player.Team ~= nil and player.Team.TeamColor.Color.R > player.Team.TeamColor.Color.B
+	local accent = if ember then Color3.fromRGB(255, 76, 28) else Color3.fromRGB(52, 222, 255)
+	local panel = if ember then Color3.fromRGB(22, 5, 8) else Color3.fromRGB(4, 15, 24)
+	radar.BackgroundColor3 = panel
+	radarStroke.Color = accent
+	radarRail.BackgroundColor3 = accent
+	radarHeader.TextColor3 = accent:Lerp(Color3.new(1, 1, 1), 0.58)
+	radarGradient.Color = ColorSequence.new(panel:Lerp(accent, 0.12), panel)
+end
+player:GetPropertyChangedSignal("Team"):Connect(refreshRadarTheme)
+refreshRadarTheme()
 
 for index, zScale in { 0.12, 0.26, 0.5, 0.74, 0.88 } do
 	local lane = Instance.new("Frame")
@@ -237,18 +260,20 @@ local function radarBaseLabel(text: string, xScale: number, color: Color3)
 	label.BackgroundColor3 = color
 	label.BackgroundTransparency = 0.42
 	label.BorderSizePixel = 0
-	label.Font = Enum.Font.GothamBlack
+	label.Font = Enum.Font.RobotoMono
 	label.Text = text
 	label.TextColor3 = Color3.fromRGB(245, 248, 252)
 	label.TextSize = 9
 	label.Parent = radarMap
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 4)
-	corner.Parent = label
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color:Lerp(Color3.new(1, 1, 1), 0.24)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.35
+	stroke.Parent = label
 end
 
-radarBaseLabel("RED", 0.13, Color3.fromRGB(195, 62, 60))
-radarBaseLabel("BLUE", 0.87, Color3.fromRGB(58, 112, 205))
+radarBaseLabel("HIVE", 0.13, Color3.fromRGB(195, 62, 60))
+radarBaseLabel("CRYO", 0.87, Color3.fromRGB(58, 112, 205))
 
 local function worldToRadar(position: Vector3): UDim2
 	local x = math.clamp((position.X + 770) / 1540, 0.02, 0.98)
@@ -285,9 +310,7 @@ local function createRadarPlayerDot(target: Player)
 		dot.ZIndex = 4
 		dot.Visible = false
 		dot.Parent = radarMap
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = dot
+		dot.Rotation = 45
 		radarPlayerDots[target] = dot
 	end
 end
@@ -415,7 +438,13 @@ local function hasBotLineOfSight(bot: Model, targetRoot: BasePart): boolean
 	return result ~= nil and result.Instance:IsDescendantOf(bot)
 end
 
+local lastRadarViewport = Vector2.zero
 RunService.RenderStepped:Connect(function(dt)
+	local camera = workspace.CurrentCamera
+	if camera and camera.ViewportSize ~= lastRadarViewport then
+		lastRadarViewport = camera.ViewportSize
+		radarScale.Scale = math.clamp(math.min(lastRadarViewport.X / 1536, lastRadarViewport.Y / 864), 0.72, 1.08)
+	end
 	radarAccumulator += dt
 	if radarAccumulator < 0.08 then
 		return
@@ -623,7 +652,7 @@ teamPingEvent.OnClientEvent:Connect(function(
 	task.delay(math.min(1.8, lifetime), function()
 		if headerSequence == pingHeaderSequence then
 			radarHeader.Text = defaultRadarHeader
-			radarHeader.TextColor3 = Color3.fromRGB(183, 207, 230)
+			refreshRadarTheme()
 		end
 	end)
 	task.delay(lifetime, function()
