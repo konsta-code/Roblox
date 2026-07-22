@@ -1,5 +1,6 @@
 -- Equipment.client.lua
 -- G / Controller-L1: Granate. F / Controller-R3: Nahkampf.
+-- Z / Controller-Y: getragene Flagge nach vorne punten.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -11,10 +12,12 @@ local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 
 local player = Players.LocalPlayer
 local throwEvent = ReplicatedStorage:WaitForChild("ThrowGrenade")
+local throwFlagEvent = ReplicatedStorage:WaitForChild("ThrowFlag")
 local meleeEvent = ReplicatedStorage:WaitForChild("MeleeAttack")
 
 local lastLocalThrow = -math.huge
 local lastLocalMelee = -math.huge
+local lastLocalFlagThrow = -math.huge
 
 local function getAimDirection(): Vector3?
 	local camera = workspace.CurrentCamera
@@ -78,6 +81,23 @@ local function onMelee(_actionName: string, inputState: Enum.UserInputState): En
 	return Enum.ContextActionResult.Sink
 end
 
+local function onThrowFlag(_actionName: string, inputState: Enum.UserInputState): Enum.ContextActionResult
+	if inputState ~= Enum.UserInputState.Begin or not canUseInput() then
+		return Enum.ContextActionResult.Pass
+	end
+	local now = os.clock()
+	if now - lastLocalFlagThrow < 0.75 then
+		return Enum.ContextActionResult.Sink
+	end
+	local direction = getAimDirection()
+	if not direction then
+		return Enum.ContextActionResult.Pass
+	end
+	lastLocalFlagThrow = now
+	throwFlagEvent:FireServer(direction)
+	return Enum.ContextActionResult.Sink
+end
+
 ContextActionService:BindAction("ThrowGrenade", onThrowGrenade, true, Enum.KeyCode.G, Enum.KeyCode.ButtonL1)
 ContextActionService:SetTitle("ThrowGrenade", "GRENADE")
 ContextActionService:SetPosition("ThrowGrenade", UDim2.new(1, -190, 1, -210))
@@ -85,3 +105,7 @@ ContextActionService:SetPosition("ThrowGrenade", UDim2.new(1, -190, 1, -210))
 ContextActionService:BindAction("MeleeAttack", onMelee, true, Enum.KeyCode.F, Enum.KeyCode.ButtonR3)
 ContextActionService:SetTitle("MeleeAttack", "MELEE")
 ContextActionService:SetPosition("MeleeAttack", UDim2.new(1, -95, 1, -285))
+
+ContextActionService:BindAction("ThrowFlag", onThrowFlag, true, Enum.KeyCode.Z, Enum.KeyCode.ButtonY)
+ContextActionService:SetTitle("ThrowFlag", "PUNT")
+ContextActionService:SetPosition("ThrowFlag", UDim2.new(1, -285, 1, -210))

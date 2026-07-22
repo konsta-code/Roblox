@@ -265,7 +265,7 @@ local jetpackFill, jetpackLabel = makeBar(Vector2.new(1, 1), UDim2.new(1, -24, 1
 jetpackLabel.Text = "JETPACK"
 
 local equipmentLabel = Instance.new("TextLabel")
-equipmentLabel.Size = UDim2.fromOffset(390, 24)
+equipmentLabel.Size = UDim2.fromOffset(540, 24)
 equipmentLabel.AnchorPoint = Vector2.new(0.5, 1)
 equipmentLabel.Position = UDim2.new(0.5, 0, 1, -46)
 equipmentLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -280,13 +280,15 @@ local equipmentCorner = Instance.new("UICorner")
 equipmentCorner.CornerRadius = UDim.new(0, 6)
 equipmentCorner.Parent = equipmentLabel
 
+local isCarryingFlag = false
 local function refreshEquipment()
 	local grenades = player:GetAttribute("Grenades")
 	local grenadeName = string.upper(ClassKitConstants.Get(player:GetAttribute("Loadout")).grenade.name)
 	equipmentLabel.Text = string.format(
-		"[G] %s x%d     [F] MELEE",
+		"[G] %s x%d   [F] MELEE   [V/MMB] PING%s",
 		grenadeName,
-		typeof(grenades) == "number" and grenades or 0
+		typeof(grenades) == "number" and grenades or 0,
+		if isCarryingFlag then "   [Z] FLAG PUNT" else ""
 	)
 end
 
@@ -417,7 +419,9 @@ scoreEvent.OnClientEvent:Connect(function(teamName: string, newScore: number)
 end)
 
 carryStatusEvent.OnClientEvent:Connect(function(isCarrying: boolean)
+	isCarryingFlag = isCarrying
 	carryBanner.Visible = isCarrying
+	refreshEquipment()
 end)
 
 combatFeedEvent.OnClientEvent:Connect(function(killerName: string?, victimName: string, weapon: string)

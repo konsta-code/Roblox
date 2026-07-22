@@ -443,7 +443,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then
 		return
 	end
-	if input.KeyCode == Enum.KeyCode.G or input.UserInputType == Enum.UserInputType.MouseButton3 then
+	if input.KeyCode == Enum.KeyCode.V or input.UserInputType == Enum.UserInputType.MouseButton3 then
 		sendTeamPing()
 	end
 end)

@@ -35,6 +35,7 @@
       "MovementImpulse": { "$className": "RemoteEvent" },
       "ActivateAbility": { "$className": "RemoteEvent" },
       "ThrowGrenade": { "$className": "RemoteEvent" },
+      "ThrowFlag": { "$className": "RemoteEvent" },
       "MeleeAttack": { "$className": "RemoteEvent" },
       "SelectLoadout": { "$className": "RemoteEvent" },
       "InventoryStation": { "$className": "RemoteEvent" },

@@ -28,6 +28,7 @@ local CombatService = require(script.Parent.CombatService)
 
 local scoreEvent = ReplicatedStorage:WaitForChild("CTFScoreUpdate")
 local carryStatusEvent = ReplicatedStorage:WaitForChild("FlagCarryStatus")
+local throwFlagEvent = ReplicatedStorage:WaitForChild("ThrowFlag")
 
 type FlagState = "AtBase" | "Carried" | "Dropped"
 
@@ -39,6 +40,8 @@ type Flag = {
 	carrier: Player?,
 	returnTimer: number?,
 	stand: BasePart,
+	pickupBlockedPlayer: Player?,
+	pickupBlockedUntil: number?,
 }
 
 local flags: { Flag } = {}
@@ -147,6 +150,9 @@ local function returnFlagToBase(flag: Flag, announceReturn: boolean?, actor: Pla
 	flag.state = "AtBase"
 	flag.carrier = nil
 	flag.returnTimer = nil
+	flag.pickupBlockedPlayer = nil
+	flag.pickupBlockedUntil = nil
+	flag.part.CanCollide = false
 	flag.part.CFrame = flag.homeCFrame
 	flag.part.Parent = workspace
 	replicateFlagState(flag)
@@ -162,15 +168,27 @@ local function returnFlagToBase(flag: Flag, announceReturn: boolean?, actor: Pla
 	end
 end
 
-local function dropFlag(flag: Flag, atPosition: Vector3)
+local function dropFlag(flag: Flag, atPosition: Vector3, launchVelocity: Vector3?, pickupBlockedPlayer: Player?)
 	local previousCarrier = flag.carrier
 
 	detachFlagPhysics(flag)
 	flag.state = "Dropped"
 	flag.carrier = nil
 	flag.returnTimer = Constants.RETURN_TIMER
+	flag.pickupBlockedPlayer = pickupBlockedPlayer
+	flag.pickupBlockedUntil = pickupBlockedPlayer and (os.clock() + 0.65) or nil
 	flag.part.CFrame = CFrame.new(atPosition)
 	flag.part.Parent = workspace
+	if launchVelocity then
+		flag.part.Anchored = false
+		flag.part.CanCollide = true
+		flag.part.AssemblyLinearVelocity = launchVelocity
+		flag.part.AssemblyAngularVelocity = Vector3.new(0, 5, 0)
+		flag.part:SetNetworkOwner(nil)
+	else
+		flag.part.Anchored = true
+		flag.part.CanCollide = false
+	end
 	replicateFlagState(flag)
 
 	if previousCarrier and previousCarrier.Parent == Players then
@@ -188,6 +206,8 @@ local function attachFlagToCarrier(flag: Flag, player: Player)
 	flag.state = "Carried"
 	flag.carrier = player
 	flag.returnTimer = nil
+	flag.pickupBlockedPlayer = nil
+	flag.pickupBlockedUntil = nil
 
 	flag.part.Anchored = false
 	flag.part.CanCollide = false
@@ -261,6 +281,9 @@ end
 
 local function tryPickup(flag: Flag, player: Player)
 	if not isLiveCapturePhase() then return end
+	if flag.pickupBlockedPlayer == player
+		and typeof(flag.pickupBlockedUntil) == "number"
+		and os.clock() < flag.pickupBlockedUntil then return end
 	local team = player.Team :: Team?
 	if not team then return end
 
@@ -276,6 +299,39 @@ local function tryPickup(flag: Flag, player: Player)
 		attachFlagToCarrier(flag, player)
 	end
 end
+
+local lastFlagThrow: { [Player]: number } = {}
+
+local function isFiniteDirection(value: any): boolean
+	return typeof(value) == "Vector3"
+		and value.X == value.X and value.Y == value.Y and value.Z == value.Z
+		and math.abs(value.X) < 1e4 and math.abs(value.Y) < 1e4 and math.abs(value.Z) < 1e4
+end
+
+throwFlagEvent.OnServerEvent:Connect(function(player: Player, requestedDirection: any)
+	if not isLiveCapturePhase() or not isFiniteDirection(requestedDirection) then return end
+	local direction = requestedDirection :: Vector3
+	if direction.Magnitude < 0.5 then return end
+	local now = os.clock()
+	if now - (lastFlagThrow[player] or -math.huge) < 0.75 then return end
+
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or humanoid.Health <= 0 or not root or not root:IsA("BasePart") then return end
+
+	for _, flag in flags do
+		if flag.state == "Carried" and flag.carrier == player then
+			lastFlagThrow[player] = now
+			local unitDirection = direction.Unit
+			local launchVelocity = unitDirection * 82
+				+ root.AssemblyLinearVelocity * 0.8
+				+ Vector3.yAxis * 10
+			dropFlag(flag, root.Position + unitDirection * 4 + Vector3.yAxis * 1.5, launchVelocity, player)
+			break
+		end
+	end
+end)
 
 local function setupFlagTouch(flag: Flag)
 	flag.part.Touched:Connect(function(hit)
@@ -376,6 +432,8 @@ local function registerStand(standPart: Instance)
 		carrier = nil,
 		returnTimer = nil,
 		stand = standPart,
+		pickupBlockedPlayer = nil,
+		pickupBlockedUntil = nil,
 	}
 	table.insert(flags, flag)
 	setupFlagTouch(flag)
@@ -408,6 +466,7 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	lastFlagThrow[player] = nil
 	for _, flag in flags do
 		if flag.state == "Carried" and flag.carrier == player then
 			returnFlagToBase(flag, true)
