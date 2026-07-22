@@ -619,6 +619,8 @@ local function updateMobility(state: BotState, objective: Vector3, dt: number)
 	end
 	state.model:SetAttribute("BotJetpackEnergy", math.round(state.jetEnergy))
 	state.model:SetAttribute("IsJetpacking", wantsJet)
+	local horizontalSpeed = Vector3.new(root.AssemblyLinearVelocity.X, 0, root.AssemblyLinearVelocity.Z).Magnitude
+	state.model:SetAttribute("IsSkiing", grounded and not wantsJet and horizontalSpeed > 32)
 	local jetAttachment = root:FindFirstChild("BotJetAttachment")
 	local jetParticles = jetAttachment and jetAttachment:FindFirstChild("BotJet")
 	if jetParticles and jetParticles:IsA("ParticleEmitter") then jetParticles.Enabled = wantsJet end
