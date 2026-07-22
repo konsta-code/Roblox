@@ -17,14 +17,16 @@ the object and triangle counts. Every asset is below 12,000 triangles.
 
 ## Character armor
 
-`characters/class_armor_v01/CTFGame_ClassArmor_v01.blend` contains a modular
-Light, Medium or Heavy armor set for every class. Each class has an FBX and
-preview plus a validation entry in `class_armor_report.json`; every set is
-below 10,000 triangles.
+`characters/class_armor_v01/CTFGame_ClassArmor_v01.blend` contains 18 modular
+sets: a skeletal Cryo Revenant for every blue-team class and an organic Ember
+Brood alien for every red-team class. Both factions keep readable Light,
+Medium and Heavy silhouettes. Every set has its own FBX and validation entry
+in `class_armor_report.json` and remains below 10,000 triangles.
 
-The game immediately displays lightweight server-replicated versions through
-`CharacterPresentation.server.lua`. Imported meshes can replace those parts
-later without changing gameplay or hitboxes.
+The game immediately displays faction-matched, lightweight server-replicated
+versions through `CharacterPresentation.server.lua`; Studio bots use the same
+visual language. Imported meshes can later replace those parts without
+changing gameplay, R15 animation or hitboxes.
 
 ## Titan Alpine environment
 

@@ -63,7 +63,8 @@ Zusätzlich zum finalen Spinfusor enthält `art_source/` jetzt:
 
 - 27 Blender-Waffenmodelle für alle neun Klassen (Disc, Automatik, Granate),
 - 27 Roblox-fertige FBX-Exporte und 27 gerenderte Vorschauen,
-- neun modulare Blender-Klassenrüstungen mit FBX und Vorschau,
+- 18 Fraktionsrüstungen: neun biomechanische Cryo-Revenants für Blau und
+  neun organische Ember-Brood-Aliens für Rot,
 - die komplette Titan-Alpine-Karte als Blender-Datei, FBX und vier Ansichten,
 - automatische Triangle-/Asset-Berichte und reproduzierbare Build-Skripte.
 
@@ -84,8 +85,9 @@ die bewährte Gameplay-Geometrie: organische Schneebänke, mehrschichtige
 Felsmassive, Wind-Eis, zwei Gletscherbereiche, den schwebenden Titan-Reaktor,
 atmosphärische Tiefenstaffelung und ausgebaute Basis-Hüllen.
 `WorldEnvironment.server.lua` und lokales Schneetreiben ergänzen das filmische
-alpine Lighting. Die vollständige Charakterpanzerung ersetzt im Spiel die
-sichtbare Roblox-Silhouette; importierte Klassenwaffen werden automatisch auch
+alpine Lighting. Die fraktionsabhängige Charakterpanzerung ersetzt im Spiel
+die sichtbare Roblox-Silhouette: Blau erscheint als skelettartiger
+Cryo-Revenant, Rot als Ember-Brood-Alien. Importierte Klassenwaffen werden auch
 als Third-Person-Modelle verwendet. Speed-Streaks, Runden-Intros und
 mehrstufige Plasma-Einschläge bilden den Production-VFX-Pass.
 

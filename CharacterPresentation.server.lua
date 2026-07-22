@@ -150,10 +150,15 @@ local function buildPresentation(player: Player, character: Model)
 	local loadoutId = player:GetAttribute("Loadout")
 	local definition = LoadoutConstants.LOADOUTS[loadoutId] or LoadoutConstants.LOADOUTS[LoadoutConstants.DEFAULT_LOADOUT]
 	local kit = ClassKitConstants.Get(loadoutId)
-	local accent = kit.disc.projectileColor
-	local secondary = kit.automatic.tracerColor
-	local graphite = Color3.fromRGB(19, 27, 38)
-	local steel = Color3.fromRGB(72, 84, 98)
+	local teamName = if player.Team then string.lower(player.Team.Name) else ""
+	local teamColor = if player.Team then player.Team.TeamColor.Color else Color3.fromRGB(70, 190, 255)
+	local emberBrood = string.find(teamName, "red", 1, true) ~= nil or teamColor.R > teamColor.B
+	local faction = if emberBrood then "EmberBrood" else "CryoRevenant"
+	local factionGlow = if emberBrood then Color3.fromRGB(255, 55, 9) else Color3.fromRGB(42, 220, 255)
+	local accent = factionGlow
+	local secondary = kit.disc.projectileColor:Lerp(factionGlow, 0.68)
+	local graphite = if emberBrood then Color3.fromRGB(17, 3, 5) else Color3.fromRGB(5, 16, 25)
+	local steel = if emberBrood then Color3.fromRGB(76, 16, 13) else Color3.fromRGB(56, 86, 101)
 	local heavy = definition.armor == "HEAVY"
 	local medium = definition.armor == "MEDIUM"
 	local scale = if heavy then 1.18 elseif medium then 1.04 else 0.9
@@ -162,6 +167,7 @@ local function buildPresentation(player: Player, character: Model)
 	model.Name = COSMETIC_NAME
 	model:SetAttribute("Loadout", tostring(loadoutId))
 	model:SetAttribute("ArmorClass", definition.armor)
+	model:SetAttribute("Faction", faction)
 	model.Parent = character
 
 	local head = findBodyPart(character, { "Head" })
@@ -177,23 +183,49 @@ local function buildPresentation(player: Player, character: Model)
 	local rightLeg = findBodyPart(character, { "RightLowerLeg", "Right Leg" })
 	local rightHand = findBodyPart(character, { "RightHand", "Right Arm" })
 
-	addPiece(model, head, "HelmetShell", Vector3.new(1.72, 1.08, 1.58) * scale, CFrame.new(0, 0.12, 0.04), graphite, Enum.Material.Metal, Enum.PartType.Ball)
-	local visor = addPiece(model, head, "Visor", Vector3.new(1.40, 0.38, 0.18) * scale, CFrame.new(0, 0.05, -0.62 * scale), accent, Enum.Material.Neon)
-	addGlow(visor, accent)
-	addPiece(model, head, "HelmetCrest", Vector3.new(0.34, 0.22, 0.78) * scale, CFrame.new(0, 0.68 * scale, 0.08), secondary, Enum.Material.Metal)
-
-	addRoundedPiece(model, torso, "ChestPlate", Vector3.new(2.15, 1.45, 0.34) * scale, CFrame.new(0, 0, -0.62 * scale), graphite:Lerp(accent, 0.2), Enum.Material.Metal)
-	addRoundedPiece(model, torso, "BackPlate", Vector3.new(1.84, 1.35, 0.38) * scale, CFrame.new(0, 0, 0.62 * scale), graphite, Enum.Material.Metal)
-	addPiece(model, torso, "LeftChestTrim", Vector3.new(0.12, 0.82, 0.12) * scale, CFrame.new(-0.68 * scale, 0.08, -0.82 * scale) * CFrame.Angles(0, 0, math.rad(-12)), accent, Enum.Material.Neon)
-	addPiece(model, torso, "RightChestTrim", Vector3.new(0.12, 0.82, 0.12) * scale, CFrame.new(0.68 * scale, 0.08, -0.82 * scale) * CFrame.Angles(0, 0, math.rad(12)), accent, Enum.Material.Neon)
-	local core = addPiece(model, torso, "ChestCore", Vector3.new(0.42, 0.56, 0.14) * scale, CFrame.new(0, 0, -0.80 * scale), secondary, Enum.Material.Neon)
+	if emberBrood then
+		addPiece(model, head, "AlienCranium", Vector3.new(1.78, 1.28, 1.56) * scale, CFrame.new(0, 0.15, 0.18), graphite, Enum.Material.Metal, Enum.PartType.Ball)
+		addPiece(model, head, "CrownCarapace", Vector3.new(0.58, 0.72, 0.92) * scale, CFrame.new(0, 0.63 * scale, 0.26), steel, Enum.Material.Metal)
+		for side = -1, 1, 2 do
+			local eye = addPiece(model, head, "HiveEye" .. side, Vector3.new(0.25, 0.20, 0.13) * scale, CFrame.new(side * 0.29 * scale, 0.08, -0.70 * scale), accent, Enum.Material.Neon, Enum.PartType.Ball)
+			addGlow(eye, accent)
+			addPiece(model, head, "Mandible" .. side, Vector3.new(0.18, 0.48, 0.22) * scale, CFrame.new(side * 0.31 * scale, -0.42, -0.58 * scale) * CFrame.Angles(0, 0, math.rad(side * 22)), steel, Enum.Material.Metal)
+		end
+		for layer = 0, 3 do
+			local width = (2.18 - layer * 0.18) * scale
+			addRoundedPiece(model, torso, "ThoraxPlate" .. layer, Vector3.new(width, 0.36, 0.38) * scale, CFrame.new(0, 0.42 - layer * 0.27, -0.64 * scale), graphite:Lerp(steel, 0.42), Enum.Material.Metal)
+		end
+		addRoundedPiece(model, torso, "DorsalCarapace", Vector3.new(1.92, 1.48, 0.42) * scale, CFrame.new(0, 0, 0.64 * scale), graphite, Enum.Material.Metal)
+		for segment = 0, 3 do
+			addRoundedPiece(model, lowerTorso, "LivingAbdomen" .. segment, Vector3.new(1.20 - segment * 0.10, 0.25, 0.34) * scale, CFrame.new(0, 0.38 - segment * 0.22, -0.52 * scale), steel, Enum.Material.Metal)
+		end
+	else
+		addPiece(model, head, "MechanicalSkull", Vector3.new(1.58, 1.02, 1.50) * scale, CFrame.new(0, 0.12, 0.02), steel, Enum.Material.Metal, Enum.PartType.Ball)
+		addPiece(model, head, "Jaw", Vector3.new(0.92, 0.34, 0.34) * scale, CFrame.new(0, -0.43, -0.36 * scale), graphite, Enum.Material.Metal)
+		for side = -1, 1, 2 do
+			local eye = addPiece(model, head, "SoulEye" .. side, Vector3.new(0.25, 0.20, 0.12) * scale, CFrame.new(side * 0.25 * scale, 0.10, -0.62 * scale), accent, Enum.Material.Neon)
+			addGlow(eye, accent)
+		end
+		addPiece(model, torso, "Sternum", Vector3.new(0.20, 1.26, 0.20) * scale, CFrame.new(0, 0, -0.68 * scale), accent, Enum.Material.Neon)
+		for rib = 0, 4 do
+			local width = (1.86 - rib * 0.13) * scale
+			addRoundedPiece(model, torso, "Rib" .. rib, Vector3.new(width, 0.17, 0.20) * scale, CFrame.new(0, 0.48 - rib * 0.24, -0.62 * scale), steel, Enum.Material.Metal)
+		end
+		for vertebra = 0, 4 do
+			addPiece(model, torso, "Spine" .. vertebra, Vector3.new(0.31, 0.20, 0.24) * scale, CFrame.new(0, 0.48 - vertebra * 0.24, 0.58 * scale), graphite, Enum.Material.Metal)
+		end
+		addRoundedPiece(model, lowerTorso, "BonePelvis", Vector3.new(1.46, 0.70, 0.36) * scale, CFrame.new(0, 0.05, -0.51 * scale), steel, Enum.Material.Metal)
+	end
+	local core = addPiece(model, torso, if emberBrood then "MoltenHeart" else "FrozenHeart", Vector3.new(0.44, 0.56, 0.16) * scale, CFrame.new(0, 0, -0.84 * scale), secondary, Enum.Material.Neon, Enum.PartType.Ball)
 	addGlow(core, secondary)
-	addRoundedPiece(model, lowerTorso, "AbdomenPlate", Vector3.new(1.35, 0.70, 0.34) * scale, CFrame.new(0, 0.05, -0.55 * scale), steel, Enum.Material.Metal)
 
 	for _, entry in { { -1, leftArm }, { 1, rightArm } } do
 		local side, arm = entry[1], entry[2]
-		addPiece(model, arm, if side < 0 then "LeftPauldron" else "RightPauldron", Vector3.new(0.78, 0.64, 0.82) * scale, CFrame.new(0, 0.32, 0), accent, Enum.Material.Metal, Enum.PartType.Ball)
+		addPiece(model, arm, if side < 0 then "LeftPauldron" else "RightPauldron", Vector3.new(if emberBrood then 0.88 else 0.72, 0.64, 0.82) * scale, CFrame.new(0, 0.32, 0), if emberBrood then graphite else steel, Enum.Material.Metal, Enum.PartType.Ball)
 		addRoundedPiece(model, arm, if side < 0 then "LeftBicep" else "RightBicep", Vector3.new(0.66, 1.02, 0.66) * scale, CFrame.new(0, -0.15, 0), graphite:Lerp(accent, 0.12), Enum.Material.Metal)
+		if emberBrood then
+			addPiece(model, arm, "ShoulderSpike" .. side, Vector3.new(0.18, 0.18, if heavy then 0.92 else 0.64) * scale, CFrame.new(side * 0.46, 0.45, 0) * CFrame.Angles(0, math.rad(side * 45), 0), steel, Enum.Material.Metal)
+		end
 	end
 	for _, entry in { { -1, leftLowerArm }, { 1, rightLowerArm } } do
 		local side, arm = entry[1], entry[2]

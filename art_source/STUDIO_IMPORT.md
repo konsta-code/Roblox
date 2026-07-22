@@ -33,10 +33,12 @@ for the disc slot until the class-specific models are uploaded.
 
 ## Character armor
 
-The nine FBX files in `art_source/characters/class_armor_v01/export/` are the
-high-detail source models. The live game currently uses the replicated,
-part-based class armor from `CharacterPresentation.server.lua`; this preserves
-R15 animation, team colors and stable hitboxes without requiring mesh IDs.
+The 18 FBX files in `art_source/characters/class_armor_v01/export/` contain a
+blue Cryo-Revenant and red Ember-Brood variant for every class. The live game
+currently uses the matching replicated, part-based presentation from
+`CharacterPresentation.server.lua`; this preserves R15 animation and stable
+hitboxes without requiring mesh IDs. Do not import these as a single static
+character: they must be rigged/skinned to the R15 skeleton first.
 
 ## Environment
 

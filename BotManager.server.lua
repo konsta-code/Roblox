@@ -72,6 +72,29 @@ local function makePart(model: Model, name: string, size: Vector3, cframe: CFram
 	return part
 end
 
+local function makeCosmetic(
+	model: Model,
+	body: BasePart,
+	name: string,
+	size: Vector3,
+	localCFrame: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	shape: Enum.PartType?
+): BasePart
+	local part = makePart(model, name, size, body.CFrame * localCFrame, color, false)
+	part.Material = material
+	part.Shape = shape or Enum.PartType.Block
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CastShadow = false
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = body
+	weld.Part1 = part
+	weld.Parent = part
+	return part
+end
+
 local function motor(name: string, part0: BasePart, part1: BasePart, c0: CFrame, c1: CFrame)
 	local joint = Instance.new("Motor6D")
 	joint.Name = name
@@ -142,7 +165,10 @@ local function createBotRig(team: Team, botName: string, loadout: string, role: 
 	model:SetAttribute("BotRole", role)
 
 	local teamColor = team.TeamColor.Color
-	local dark = teamColor:Lerp(Color3.fromRGB(14, 19, 28), 0.62)
+	local emberBrood = teamColor.R > teamColor.B
+	local factionGlow = if emberBrood then Color3.fromRGB(255, 55, 9) else Color3.fromRGB(42, 220, 255)
+	local dark = if emberBrood then Color3.fromRGB(17, 3, 5) else Color3.fromRGB(5, 16, 25)
+	local armor = if emberBrood then Color3.fromRGB(76, 16, 13) else Color3.fromRGB(56, 86, 101)
 	local root = makePart(model, "HumanoidRootPart", Vector3.new(2, 2, 1), CFrame.new(0, 3, 0), dark, false)
 	root.Transparency = 1
 	root.Massless = false
@@ -160,12 +186,49 @@ local function createBotRig(team: Team, botName: string, loadout: string, role: 
 	motor("Left Hip", torso, leftLeg, CFrame.new(-0.5, -1, 0), CFrame.new(0, 1, 0))
 	motor("Right Hip", torso, rightLeg, CFrame.new(0.5, -1, 0), CFrame.new(0, 1, 0))
 
-	local chest = makePart(model, "ArmorChest", Vector3.new(2.35, 1.5, 1.25), torso.CFrame * CFrame.new(0, 0.12, 0), teamColor, false)
-	chest.Material = Enum.Material.Metal
-	local chestWeld = Instance.new("WeldConstraint")
-	chestWeld.Part0 = torso
-	chestWeld.Part1 = chest
-	chestWeld.Parent = chest
+	-- Keep the simple R6 rig as an invisible physics skeleton and weld the same
+	-- faction language used by player armor around it.
+	for _, body in { torso, head, leftArm, rightArm, leftLeg, rightLeg } do
+		body.Transparency = 1
+		body.CastShadow = false
+	end
+	if emberBrood then
+		makeCosmetic(model, head, "AlienCranium", Vector3.new(1.78, 1.22, 1.26), CFrame.new(0, 0.1, 0.08), dark, Enum.Material.Metal, Enum.PartType.Ball)
+		makeCosmetic(model, head, "CrownCarapace", Vector3.new(0.52, 0.72, 0.74), CFrame.new(0, 0.62, 0.18), armor, Enum.Material.Metal)
+		for side = -1, 1, 2 do
+			makeCosmetic(model, head, "HiveEye" .. side, Vector3.new(0.22, 0.18, 0.12), CFrame.new(side * 0.28, 0.08, -0.64), factionGlow, Enum.Material.Neon, Enum.PartType.Ball)
+			makeCosmetic(model, head, "Mandible" .. side, Vector3.new(0.16, 0.40, 0.18), CFrame.new(side * 0.28, -0.35, -0.48) * CFrame.Angles(0, 0, math.rad(side * 22)), armor, Enum.Material.Metal)
+		end
+		for layer = 0, 3 do
+			makeCosmetic(model, torso, "ThoraxPlate" .. layer, Vector3.new(2.28 - layer * 0.15, 0.35, 1.20), CFrame.new(0, 0.54 - layer * 0.34, -0.13), if layer % 2 == 0 then dark else armor, Enum.Material.Metal)
+		end
+	else
+		makeCosmetic(model, head, "MechanicalSkull", Vector3.new(1.58, 1.0, 1.20), CFrame.new(0, 0.10, 0), armor, Enum.Material.Metal, Enum.PartType.Ball)
+		makeCosmetic(model, head, "Jaw", Vector3.new(0.90, 0.30, 0.36), CFrame.new(0, -0.43, -0.29), dark, Enum.Material.Metal)
+		for side = -1, 1, 2 do
+			makeCosmetic(model, head, "SoulEye" .. side, Vector3.new(0.22, 0.18, 0.11), CFrame.new(side * 0.24, 0.08, -0.57), factionGlow, Enum.Material.Neon)
+		end
+		makeCosmetic(model, torso, "Sternum", Vector3.new(0.18, 1.55, 0.18), CFrame.new(0, 0, -0.58), factionGlow, Enum.Material.Neon)
+		for rib = 0, 4 do
+			makeCosmetic(model, torso, "Rib" .. rib, Vector3.new(1.92 - rib * 0.12, 0.16, 0.20), CFrame.new(0, 0.62 - rib * 0.30, -0.52), armor, Enum.Material.Metal, Enum.PartType.Ball)
+		end
+	end
+	for _, entry in { { -1, leftArm }, { 1, rightArm } } do
+		local side, arm = entry[1], entry[2]
+		makeCosmetic(model, arm, "ArmBone" .. side, Vector3.new(0.58, 1.82, 0.62), CFrame.new(), if emberBrood then armor else Color3.fromRGB(110, 139, 150), Enum.Material.Metal, Enum.PartType.Ball)
+		makeCosmetic(model, arm, "Shoulder" .. side, Vector3.new(if emberBrood then 1.0 else 0.82, 0.62, 0.82), CFrame.new(0, 0.63, 0), armor, Enum.Material.Metal, Enum.PartType.Ball)
+	end
+	for _, entry in { { -1, leftLeg }, { 1, rightLeg } } do
+		local side, leg = entry[1], entry[2]
+		makeCosmetic(model, leg, "Shin" .. side, Vector3.new(0.72, 1.82, 0.74), CFrame.new(), if emberBrood then dark else armor, Enum.Material.Metal, Enum.PartType.Ball)
+	end
+	local heart = makeCosmetic(model, torso, if emberBrood then "MoltenHeart" else "FrozenHeart", Vector3.new(0.42, 0.42, 0.20), CFrame.new(0, 0.08, -0.72), factionGlow, Enum.Material.Neon, Enum.PartType.Ball)
+	local heartLight = Instance.new("PointLight")
+	heartLight.Color = factionGlow
+	heartLight.Brightness = 0.55
+	heartLight.Range = 5
+	heartLight.Shadows = false
+	heartLight.Parent = heart
 
 	local weapon = makePart(model, "BotWeapon", Vector3.new(0.55, 0.55, 2.7), rightArm.CFrame * CFrame.new(0, -0.45, -1), dark, false)
 	weapon.Material = Enum.Material.Metal
