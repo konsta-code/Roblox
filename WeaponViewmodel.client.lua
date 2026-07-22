@@ -14,7 +14,8 @@ local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 local player = Players.LocalPlayer
 local VIEWMODEL_SCALE = 0.72
 local IMPORTED_SPINFUSOR_LENGTH = 2.5
-local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.58, -0.52, 0.15)
+local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.28, -0.6, 0.15)
+local IMPORTED_SPINFUSOR_MUZZLE = CFrame.new(0.28, -0.58, -1.3)
 
 type WeaponTheme = {
 	armor: Color3,
@@ -277,9 +278,10 @@ local function createImportedSpinfusor(): ViewModel?
 		Vector3.new(0.4, 0.4, 0.4),
 		Color3.fromRGB(75, 205, 255),
 		Enum.Material.Neon,
-		CFrame.new(0, 0.02, -2.15),
+		IMPORTED_SPINFUSOR_MUZZLE,
 		Enum.PartType.Ball
 	)
+	muzzle.Size = Vector3.new(0.26, 0.26, 0.26)
 	muzzle.LocalTransparencyModifier = 1
 	print("[WeaponViewmodel] Spinfusor mesh loaded: rbxassetid://72177953697579")
 	return { model = model, root = root, parts = parts, muzzle = muzzle }
