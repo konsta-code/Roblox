@@ -7,6 +7,14 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local accumulator = 0
 
+-- Production remains a first-person game. Studio playtests may zoom out so
+-- artists can inspect the faction silhouette and its movement on the R15 rig.
+if RunService:IsStudio() then
+	player.CameraMode = Enum.CameraMode.Classic
+	player.CameraMinZoomDistance = 0.5
+	player.CameraMaxZoomDistance = 18
+end
+
 RunService.RenderStepped:Connect(function(dt)
 	accumulator += dt
 	if accumulator < 0.08 then return end
