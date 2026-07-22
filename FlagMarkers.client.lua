@@ -397,6 +397,24 @@ UserInputService.InputBegan:Connect(function(input, processed)
 end)
 
 local radarAccumulator = 0
+local radarSightParams = RaycastParams.new()
+radarSightParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function hasBotLineOfSight(bot: Model, targetRoot: BasePart): boolean
+	local camera = workspace.CurrentCamera
+	local localCharacter = player.Character
+	local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+	local origin = if camera then camera.CFrame.Position
+		elseif localRoot and localRoot:IsA("BasePart") then localRoot.Position
+		else nil
+	if not origin then return false end
+	local offset = targetRoot.Position - origin
+	if offset.Magnitude <= 0.1 then return true end
+	radarSightParams.FilterDescendantsInstances = if localCharacter then { localCharacter } else {}
+	local result = workspace:Raycast(origin, offset, radarSightParams)
+	return result ~= nil and result.Instance:IsDescendantOf(bot)
+end
+
 RunService.RenderStepped:Connect(function(dt)
 	radarAccumulator += dt
 	if radarAccumulator < 0.08 then
@@ -443,10 +461,11 @@ RunService.RenderStepped:Connect(function(dt)
 		local botTeam = bot:GetAttribute("BotTeam")
 		local isAlly = player.Team ~= nil and botTeam == player.Team.Name
 		local nearby = localRoot and localRoot:IsA("BasePart") and root and root:IsA("BasePart")
-			and (root.Position - localRoot.Position).Magnitude <= 260
+			and (root.Position - localRoot.Position).Magnitude <= 220
+		local visuallyConfirmed = nearby and root and root:IsA("BasePart") and hasBotLineOfSight(bot, root)
 		local carrying = bot:FindFirstChild("RedFlag") or bot:FindFirstChild("BlueFlag")
 		local visible = root and root:IsA("BasePart") and humanoid and humanoid.Health > 0
-			and (isAlly or nearby or carrying ~= nil)
+			and (isAlly or visuallyConfirmed or carrying ~= nil)
 		dot.Visible = visible == true
 		if visible and root and root:IsA("BasePart") then
 			dot.Position = worldToRadar(root.Position)

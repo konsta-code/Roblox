@@ -86,7 +86,10 @@ local function addBotHud(model: Model, head: BasePart, humanoid: Humanoid, team:
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "BotStatus"
 	billboard.Adornee = head
-	billboard.AlwaysOnTop = true
+	-- Identification is close-range information, not a permanent enemy marker.
+	-- With AlwaysOnTop disabled, terrain and base geometry occlude the plate.
+	billboard.AlwaysOnTop = false
+	billboard.MaxDistance = 95
 	billboard.Size = UDim2.fromOffset(150, 38)
 	billboard.StudsOffset = Vector3.new(0, 2.25, 0)
 	billboard.Parent = model
@@ -95,7 +98,7 @@ local function addBotHud(model: Model, head: BasePart, humanoid: Humanoid, team:
 	label.BackgroundTransparency = 1
 	label.Size = UDim2.new(1, 0, 0, 22)
 	label.Font = Enum.Font.GothamBold
-	label.Text = model.Name .. "  //  " .. role .. "  //  " .. string.upper(loadout)
+	label.Text = model.Name .. "  //  " .. string.upper(loadout)
 	label.TextColor3 = team.TeamColor.Color:Lerp(Color3.new(1, 1, 1), 0.35)
 	label.TextStrokeTransparency = 0.35
 	label.TextScaled = true
