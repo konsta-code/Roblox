@@ -18,6 +18,8 @@ WeaponState.PrimaryChanged = primaryChanged.Event
 
 local selected: Weapon = "Spinfusor"
 local primaryDown = false
+local automaticHeat = 0
+local automaticLockedUntil = 0
 
 function WeaponState.Set(weapon: Weapon)
 	if weapon ~= "Spinfusor" and weapon ~= "Chaingun" then
@@ -44,6 +46,15 @@ end
 
 function WeaponState.IsPrimaryDown(): boolean
 	return primaryDown
+end
+
+function WeaponState.SetAutomaticHeat(heat: number, lockedUntil: number)
+	automaticHeat = math.clamp(heat, 0, 100)
+	automaticLockedUntil = math.max(0, lockedUntil)
+end
+
+function WeaponState.GetAutomaticHeat(): (number, number)
+	return automaticHeat, automaticLockedUntil
 end
 
 return WeaponState

@@ -45,6 +45,19 @@ Die Quelldateien liegen unter `export/` und `art_source/weapons/spinfusor/`.
 Falls das Studio-Asset in einem frischen Place noch nicht vorhanden ist, nutzt
 das Viewmodel automatisch eine prozedurale Ersatzwaffe, statt abzustürzen.
 
+## Komplettes Art-Paket
+
+Zusätzlich zum finalen Spinfusor enthält `art_source/` jetzt:
+
+- 27 Blender-Waffenmodelle für alle neun Klassen (Disc, Automatik, Granate),
+- 27 Roblox-fertige FBX-Exporte und 27 gerenderte Vorschauen,
+- neun modulare Blender-Klassenrüstungen mit FBX und Vorschau,
+- automatische Triangle-/Asset-Berichte und reproduzierbare Build-Skripte.
+
+Die vollständige Zuordnung steht in `art_source/ASSET_MANIFEST.md`. Bis neue
+Mesh-Uploads Roblox-Asset-IDs besitzen, zeigt das Spiel alle Klassen bereits
+mit performanter replizierter Rüstung und Third-Person-Waffenmodell.
+
 ## Release-Prüfung
 
 ```powershell

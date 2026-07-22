@@ -63,6 +63,7 @@
       "WeaponState": { "$path": "WeaponState.server.lua" },
       "WorldEnvironment": { "$path": "WorldEnvironment.server.lua" },
       "PlayerData": { "$path": "PlayerData.server.lua" },
+      "CharacterPresentation": { "$path": "CharacterPresentation.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" }
     },
     "StarterPlayer": {
@@ -82,6 +83,8 @@
         "WeaponViewmodel": { "$path": "WeaponViewmodel.client.lua" },
         "WeaponPresentation": { "$path": "WeaponPresentation.client.lua" },
         "MovementPresentation": { "$path": "MovementPresentation.client.lua" },
+        "CharacterPresentation": { "$path": "CharacterPresentation.client.lua" },
+        "GameGuide": { "$path": "GameGuide.client.lua" },
         "Ability": { "$path": "Ability.client.lua" },
         "Equipment": { "$path": "Equipment.client.lua" },
         "Chaingun": { "$path": "Chaingun.client.lua" },

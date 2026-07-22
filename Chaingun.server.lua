@@ -132,10 +132,28 @@ fireEvent.OnServerEvent:Connect(function(player: Player, direction: any, _claime
 	tryFire(player, direction)
 end)
 
-Players.PlayerRemoving:Connect(function(player)
+local function resetPlayerWeapon(player: Player)
 	lastFireTime[player] = nil
 	chainStartTime[player] = nil
 	heat[player] = nil
 	lastHeatUpdateTime[player] = nil
 	overheatUntil[player] = nil
+end
+
+local function setupPlayer(player: Player)
+	player.CharacterAdded:Connect(function()
+		resetPlayerWeapon(player)
+	end)
+	player:GetAttributeChangedSignal("Loadout"):Connect(function()
+		resetPlayerWeapon(player)
+	end)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+for _, player in Players:GetPlayers() do
+	setupPlayer(player)
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	resetPlayerWeapon(player)
 end)

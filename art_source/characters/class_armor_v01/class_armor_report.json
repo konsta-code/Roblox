@@ -1,0 +1,87 @@
+{
+  "blend": "CTFGame_ClassArmor_v01.blend",
+  "class_count": 9,
+  "assets": [
+    {
+      "class": "Pathfinder",
+      "weight": "Light",
+      "description": "Aero fins and compact jetpack",
+      "objects": 21,
+      "triangles": 2744,
+      "fbx": "export/Pathfinder_Armor.fbx",
+      "preview": "previews/Pathfinder_Armor.png"
+    },
+    {
+      "class": "Sentinel",
+      "weight": "Light",
+      "description": "Sensor visor and rangefinder",
+      "objects": 20,
+      "triangles": 2668,
+      "fbx": "export/Sentinel_Armor.fbx",
+      "preview": "previews/Sentinel_Armor.png"
+    },
+    {
+      "class": "Infiltrator",
+      "weight": "Light",
+      "description": "Low profile cloak nodes",
+      "objects": 24,
+      "triangles": 3068,
+      "fbx": "export/Infiltrator_Armor.fbx",
+      "preview": "previews/Infiltrator_Armor.png"
+    },
+    {
+      "class": "Soldier",
+      "weight": "Medium",
+      "description": "Balanced segmented plates",
+      "objects": 19,
+      "triangles": 2528,
+      "fbx": "export/Soldier_Armor.fbx",
+      "preview": "previews/Soldier_Armor.png"
+    },
+    {
+      "class": "Technician",
+      "weight": "Medium",
+      "description": "Repair pack and utility pods",
+      "objects": 22,
+      "triangles": 3044,
+      "fbx": "export/Technician_Armor.fbx",
+      "preview": "previews/Technician_Armor.png"
+    },
+    {
+      "class": "Raider",
+      "weight": "Medium",
+      "description": "EMP coils and strike plates",
+      "objects": 21,
+      "triangles": 2904,
+      "fbx": "export/Raider_Armor.fbx",
+      "preview": "previews/Raider_Armor.png"
+    },
+    {
+      "class": "Juggernaut",
+      "weight": "Heavy",
+      "description": "Siege pauldrons and reactor",
+      "objects": 20,
+      "triangles": 3024,
+      "fbx": "export/Juggernaut_Armor.fbx",
+      "preview": "previews/Juggernaut_Armor.png"
+    },
+    {
+      "class": "Brute",
+      "weight": "Heavy",
+      "description": "Ram armor and shock nodes",
+      "objects": 22,
+      "triangles": 3308,
+      "fbx": "export/Brute_Armor.fbx",
+      "preview": "previews/Brute_Armor.png"
+    },
+    {
+      "class": "Doombringer",
+      "weight": "Heavy",
+      "description": "Fortress plating and shield emitters",
+      "objects": 21,
+      "triangles": 3064,
+      "fbx": "export/Doombringer_Armor.fbx",
+      "preview": "previews/Doombringer_Armor.png"
+    }
+  ]
+}

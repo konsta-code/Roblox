@@ -1,0 +1,251 @@
+{
+  "blend": "CTFGame_Arsenal_v01.blend",
+  "asset_count": 27,
+  "class_count": 9,
+  "triangle_budget_per_asset": 12000,
+  "assets": [
+    {
+      "name": "Pathfinder_LightSpinfusor",
+      "class": "Pathfinder",
+      "slot": "disc",
+      "objects": 15,
+      "triangles": 3132,
+      "fbx": "export/Pathfinder_LightSpinfusor.fbx",
+      "preview": "previews/Pathfinder_LightSpinfusor.png"
+    },
+    {
+      "name": "Pathfinder_LightAssaultRifle",
+      "class": "Pathfinder",
+      "slot": "automatic",
+      "objects": 14,
+      "triangles": 1576,
+      "fbx": "export/Pathfinder_LightAssaultRifle.fbx",
+      "preview": "previews/Pathfinder_LightAssaultRifle.png"
+    },
+    {
+      "name": "Pathfinder_ImpactNitron",
+      "class": "Pathfinder",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Pathfinder_ImpactNitron.fbx",
+      "preview": "previews/Pathfinder_ImpactNitron.png"
+    },
+    {
+      "name": "Sentinel_NovaBlaster",
+      "class": "Sentinel",
+      "slot": "disc",
+      "objects": 17,
+      "triangles": 3348,
+      "fbx": "export/Sentinel_NovaBlaster.fbx",
+      "preview": "previews/Sentinel_NovaBlaster.png"
+    },
+    {
+      "name": "Sentinel_BXT1Rifle",
+      "class": "Sentinel",
+      "slot": "automatic",
+      "objects": 15,
+      "triangles": 1844,
+      "fbx": "export/Sentinel_BXT1Rifle.fbx",
+      "preview": "previews/Sentinel_BXT1Rifle.png"
+    },
+    {
+      "name": "Sentinel_GrenadeXL",
+      "class": "Sentinel",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Sentinel_GrenadeXL.fbx",
+      "preview": "previews/Sentinel_GrenadeXL.png"
+    },
+    {
+      "name": "Infiltrator_StealthSpinfusor",
+      "class": "Infiltrator",
+      "slot": "disc",
+      "objects": 16,
+      "triangles": 3240,
+      "fbx": "export/Infiltrator_StealthSpinfusor.fbx",
+      "preview": "previews/Infiltrator_StealthSpinfusor.png"
+    },
+    {
+      "name": "Infiltrator_RhinoSMG",
+      "class": "Infiltrator",
+      "slot": "automatic",
+      "objects": 14,
+      "triangles": 1576,
+      "fbx": "export/Infiltrator_RhinoSMG.fbx",
+      "preview": "previews/Infiltrator_RhinoSMG.png"
+    },
+    {
+      "name": "Infiltrator_StickyGrenade",
+      "class": "Infiltrator",
+      "slot": "grenade",
+      "objects": 7,
+      "triangles": 932,
+      "fbx": "export/Infiltrator_StickyGrenade.fbx",
+      "preview": "previews/Infiltrator_StickyGrenade.png"
+    },
+    {
+      "name": "Soldier_Spinfusor",
+      "class": "Soldier",
+      "slot": "disc",
+      "objects": 15,
+      "triangles": 3132,
+      "fbx": "export/Soldier_Spinfusor.fbx",
+      "preview": "previews/Soldier_Spinfusor.png"
+    },
+    {
+      "name": "Soldier_AssaultRifle",
+      "class": "Soldier",
+      "slot": "automatic",
+      "objects": 14,
+      "triangles": 1576,
+      "fbx": "export/Soldier_AssaultRifle.fbx",
+      "preview": "previews/Soldier_AssaultRifle.png"
+    },
+    {
+      "name": "Soldier_APGrenade",
+      "class": "Soldier",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Soldier_APGrenade.fbx",
+      "preview": "previews/Soldier_APGrenade.png"
+    },
+    {
+      "name": "Technician_Thumper",
+      "class": "Technician",
+      "slot": "disc",
+      "objects": 16,
+      "triangles": 3320,
+      "fbx": "export/Technician_Thumper.fbx",
+      "preview": "previews/Technician_Thumper.png"
+    },
+    {
+      "name": "Technician_TCN4SMG",
+      "class": "Technician",
+      "slot": "automatic",
+      "objects": 14,
+      "triangles": 1576,
+      "fbx": "export/Technician_TCN4SMG.fbx",
+      "preview": "previews/Technician_TCN4SMG.png"
+    },
+    {
+      "name": "Technician_TCNGrenade",
+      "class": "Technician",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Technician_TCNGrenade.fbx",
+      "preview": "previews/Technician_TCNGrenade.png"
+    },
+    {
+      "name": "Raider_ARXBuster",
+      "class": "Raider",
+      "slot": "disc",
+      "objects": 16,
+      "triangles": 3320,
+      "fbx": "export/Raider_ARXBuster.fbx",
+      "preview": "previews/Raider_ARXBuster.png"
+    },
+    {
+      "name": "Raider_NJ5SMG",
+      "class": "Raider",
+      "slot": "automatic",
+      "objects": 14,
+      "triangles": 1576,
+      "fbx": "export/Raider_NJ5SMG.fbx",
+      "preview": "previews/Raider_NJ5SMG.png"
+    },
+    {
+      "name": "Raider_EMPGrenade",
+      "class": "Raider",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Raider_EMPGrenade.fbx",
+      "preview": "previews/Raider_EMPGrenade.png"
+    },
+    {
+      "name": "Juggernaut_HeavySpinfusor",
+      "class": "Juggernaut",
+      "slot": "disc",
+      "objects": 15,
+      "triangles": 3132,
+      "fbx": "export/Juggernaut_HeavySpinfusor.fbx",
+      "preview": "previews/Juggernaut_HeavySpinfusor.png"
+    },
+    {
+      "name": "Juggernaut_X1LMG",
+      "class": "Juggernaut",
+      "slot": "automatic",
+      "objects": 16,
+      "triangles": 2112,
+      "fbx": "export/Juggernaut_X1LMG.fbx",
+      "preview": "previews/Juggernaut_X1LMG.png"
+    },
+    {
+      "name": "Juggernaut_HeavyAPGrenade",
+      "class": "Juggernaut",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Juggernaut_HeavyAPGrenade.fbx",
+      "preview": "previews/Juggernaut_HeavyAPGrenade.png"
+    },
+    {
+      "name": "Brute_BruteSpinfusor",
+      "class": "Brute",
+      "slot": "disc",
+      "objects": 15,
+      "triangles": 3132,
+      "fbx": "export/Brute_BruteSpinfusor.fbx",
+      "preview": "previews/Brute_BruteSpinfusor.png"
+    },
+    {
+      "name": "Brute_AutoShotgun",
+      "class": "Brute",
+      "slot": "automatic",
+      "objects": 15,
+      "triangles": 1828,
+      "fbx": "export/Brute_AutoShotgun.fbx",
+      "preview": "previews/Brute_AutoShotgun.png"
+    },
+    {
+      "name": "Brute_FractalGrenade",
+      "class": "Brute",
+      "slot": "grenade",
+      "objects": 9,
+      "triangles": 1320,
+      "fbx": "export/Brute_FractalGrenade.fbx",
+      "preview": "previews/Brute_FractalGrenade.png"
+    },
+    {
+      "name": "Doombringer_SaberLauncher",
+      "class": "Doombringer",
+      "slot": "disc",
+      "objects": 17,
+      "triangles": 3464,
+      "fbx": "export/Doombringer_SaberLauncher.fbx",
+      "preview": "previews/Doombringer_SaberLauncher.png"
+    },
+    {
+      "name": "Doombringer_Chaingun",
+      "class": "Doombringer",
+      "slot": "automatic",
+      "objects": 17,
+      "triangles": 2316,
+      "fbx": "export/Doombringer_Chaingun.fbx",
+      "preview": "previews/Doombringer_Chaingun.png"
+    },
+    {
+      "name": "Doombringer_FragGrenade",
+      "class": "Doombringer",
+      "slot": "grenade",
+      "objects": 5,
+      "triangles": 2112,
+      "fbx": "export/Doombringer_FragGrenade.fbx",
+      "preview": "previews/Doombringer_FragGrenade.png"
+    }
+  ]
+}

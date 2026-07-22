@@ -148,6 +148,50 @@ cooldownLabel.TextColor3 = Color3.fromRGB(150, 245, 205)
 cooldownLabel.TextSize = 9
 cooldownLabel.Parent = cooldownFrame
 
+local heatFrame = Instance.new("Frame")
+heatFrame.Name = "AutomaticHeat"
+heatFrame.Size = UDim2.fromOffset(138, 20)
+heatFrame.AnchorPoint = Vector2.new(0.5, 0)
+heatFrame.Position = UDim2.new(0.5, 0, 0.5, 56)
+heatFrame.BackgroundColor3 = Color3.fromRGB(8, 13, 20)
+heatFrame.BackgroundTransparency = 0.2
+heatFrame.BorderSizePixel = 0
+heatFrame.Visible = false
+heatFrame.Parent = screenGui
+local heatCorner = Instance.new("UICorner")
+heatCorner.CornerRadius = UDim.new(0, 5)
+heatCorner.Parent = heatFrame
+
+local heatTrack = Instance.new("Frame")
+heatTrack.Size = UDim2.new(1, -8, 0, 5)
+heatTrack.Position = UDim2.fromOffset(4, 12)
+heatTrack.BackgroundColor3 = Color3.fromRGB(34, 43, 54)
+heatTrack.BorderSizePixel = 0
+heatTrack.ClipsDescendants = true
+heatTrack.Parent = heatFrame
+local heatTrackCorner = Instance.new("UICorner")
+heatTrackCorner.CornerRadius = UDim.new(1, 0)
+heatTrackCorner.Parent = heatTrack
+
+local heatFill = Instance.new("Frame")
+heatFill.Size = UDim2.fromScale(0, 1)
+heatFill.BackgroundColor3 = Color3.fromRGB(95, 205, 255)
+heatFill.BorderSizePixel = 0
+heatFill.Parent = heatTrack
+local heatFillCorner = Instance.new("UICorner")
+heatFillCorner.CornerRadius = UDim.new(1, 0)
+heatFillCorner.Parent = heatFill
+
+local heatLabel = Instance.new("TextLabel")
+heatLabel.Size = UDim2.new(1, -8, 0, 11)
+heatLabel.Position = UDim2.fromOffset(4, 1)
+heatLabel.BackgroundTransparency = 1
+heatLabel.Font = Enum.Font.GothamBold
+heatLabel.Text = "HEAT  000%"
+heatLabel.TextColor3 = Color3.fromRGB(145, 220, 255)
+heatLabel.TextSize = 9
+heatLabel.Parent = heatFrame
+
 local speedFrame = Instance.new("Frame")
 speedFrame.Name = "SpeedReadout"
 speedFrame.Size = UDim2.fromOffset(150, 34)
@@ -189,6 +233,15 @@ RunService.RenderStepped:Connect(function()
 	cooldownLabel.Text = if ready
 		then "BEREIT"
 		else string.format("LÄDT  %.1fs", math.max(0, duration - elapsed))
+
+	local heat, lockedUntil = WeaponState.GetAutomaticHeat()
+	local overheated = lockedUntil > os.clock()
+	local heatRatio = math.clamp(heat / 100, 0, 1)
+	heatFrame.Visible = selected == "Chaingun" and player:GetAttribute("LoadoutMenuOpen") ~= true
+	heatFill.Size = UDim2.fromScale(heatRatio, 1)
+	heatFill.BackgroundColor3 = Color3.fromRGB(75, 200, 255):Lerp(Color3.fromRGB(255, 72, 45), heatRatio)
+	heatLabel.Text = if overheated then "OVERHEAT" else string.format("HEAT  %03d%%", math.floor(heat + 0.5))
+	heatLabel.TextColor3 = if overheated then Color3.fromRGB(255, 105, 75) else heatFill.BackgroundColor3
 
 	local crosshairColor = if ready
 		then Color3.fromRGB(235, 250, 255)

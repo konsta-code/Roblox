@@ -16,6 +16,7 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
 local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
+local ChaingunConstants = require(ReplicatedStorage.Modules.ChaingunConstants)
 local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 local WeaponState = require(ReplicatedStorage.Modules.WeaponState)
 local fireEvent = ReplicatedStorage:WaitForChild("FireChaingun")
@@ -24,6 +25,8 @@ local player = Players.LocalPlayer
 
 local lastShotTime = 0
 local firingStartedAt = 0
+local localHeat = 0
+local localOverheatUntil = 0
 
 local function drawTracer(origin: Vector3, endPoint: Vector3, color: Color3, width: number)
 	local distance = (endPoint - origin).Magnitude
@@ -74,12 +77,18 @@ local function tryFire(isInitialPress: boolean)
 	if WeaponState.Get() ~= "Chaingun" then return end -- Linksklick nur wenn Chaingun gewählt
 	local now = os.clock()
 	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).automatic
+	if localOverheatUntil > now then return end
 	if profile.singleShotCooldown and not isInitialPress then return end
 	local spinProgress = math.clamp((now - firingStartedAt) / math.max(profile.spinUpTime, 0.01), 0, 1)
 	local cooldown = profile.singleShotCooldown
 		or (profile.maxFireInterval - (profile.maxFireInterval - profile.minFireInterval) * spinProgress)
 	if now - lastShotTime < cooldown then return end
 	lastShotTime = now
+	localHeat = math.min(ChaingunConstants.HEAT_MAX, localHeat + profile.heatPerShot)
+	if localHeat >= ChaingunConstants.HEAT_MAX then
+		localOverheatUntil = now + profile.overheatLockout
+	end
+	WeaponState.SetAutomaticHeat(localHeat, localOverheatUntil)
 	WeaponFeedback.StartCooldown("Chaingun", cooldown)
 	fireOnce(profile)
 end
@@ -91,6 +100,21 @@ WeaponState.PrimaryChanged:Connect(function(down: boolean)
 	end
 end)
 
-RunService.RenderStepped:Connect(function()
+local function resetHeat()
+	localHeat = 0
+	localOverheatUntil = 0
+	WeaponState.SetAutomaticHeat(0, 0)
+end
+
+player.CharacterAdded:Connect(resetHeat)
+player:GetAttributeChangedSignal("Loadout"):Connect(resetHeat)
+
+RunService.RenderStepped:Connect(function(dt)
+	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).automatic
+	localHeat = math.max(0, localHeat - profile.heatCooldownRate * dt)
+	if localOverheatUntil <= os.clock() and localHeat < ChaingunConstants.HEAT_MAX then
+		localOverheatUntil = 0
+	end
+	WeaponState.SetAutomaticHeat(localHeat, localOverheatUntil)
 	tryFire(false)
 end)
