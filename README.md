@@ -19,7 +19,9 @@ reinen Edit-Modus kann deshalb zunächst nur die Baseplate sichtbar sein.
 
 In Roblox Studio starten automatisch drei rote und drei blaue Bots. Sie nutzen
 unterschiedliche Klassen, kämpfen, greifen Flaggen an, bringen sie zurück,
-respawnen und erscheinen auf dem taktischen Radar. Bot-Kills geben 75 Punkte.
+respawnen und erscheinen auf dem taktischen Radar. Angreifer, Verteidiger und
+Skirmisher nutzen Ski-Boosts, Jetpack, Automatikfeuer und vorgehaltene
+Spinfusor-Projektile. Bot-Kills geben 75 Punkte.
 Die Bots sind absichtlich nur in Studio aktiv und erscheinen nicht ungefragt in
 einem veröffentlichten Live-Server.
 
