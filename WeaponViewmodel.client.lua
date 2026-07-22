@@ -1,6 +1,6 @@
 -- WeaponViewmodel.client.lua
--- Prozedurales First-Person-Viewmodel ohne externe Assets. Alle Teile sind
--- rein lokal, haben keine Kollision und beeinflussen das Gameplay nicht.
+-- First-Person-Viewmodel. Bevorzugt das importierte Spinfusor-Mesh und nutzt
+-- die prozedurale Version als Fallback, falls das Asset nicht vorhanden ist.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -222,7 +222,65 @@ local function createRoot(name: string): (Model, BasePart)
 	return model, root
 end
 
+local function createImportedSpinfusor(): ViewModel?
+	local weaponAssets = ReplicatedStorage:FindFirstChild("WeaponAssets")
+	local template = weaponAssets and weaponAssets:FindFirstChild("Spinfusor")
+	if not template or not template:IsA("Model") then
+		return nil
+	end
+
+	local model, root = createRoot("SpinfusorViewmodel")
+	local imported = template:Clone()
+	imported.Name = "ImportedSpinfusor"
+	imported.Parent = model
+	imported:ScaleTo(VIEWMODEL_SCALE)
+	imported:PivotTo(root.CFrame * CFrame.new(0, -0.08, 0.15))
+
+	local parts = {}
+	for _, descendant in imported:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = false
+			descendant.CanCollide = false
+			descendant.CanTouch = false
+			descendant.CanQuery = false
+			descendant.CastShadow = false
+			descendant.Massless = true
+			descendant:SetAttribute("FinishRole", "Armor")
+			table.insert(parts, descendant)
+
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = root
+			weld.Part1 = descendant
+			weld.Parent = descendant
+		end
+	end
+
+	if #parts == 0 then
+		model:Destroy()
+		return nil
+	end
+
+	local muzzle = makePart(
+		model,
+		root,
+		"MuzzleFlash",
+		Vector3.new(0.4, 0.4, 0.4),
+		Color3.fromRGB(75, 205, 255),
+		Enum.Material.Neon,
+		CFrame.new(0, 0.02, -2.15),
+		Enum.PartType.Ball
+	)
+	muzzle.LocalTransparencyModifier = 1
+	print("[WeaponViewmodel] Spinfusor mesh loaded: rbxassetid://72177953697579")
+	return { model = model, root = root, parts = parts, muzzle = muzzle }
+end
+
 local function createSpinfusor(): ViewModel
+	local imported = createImportedSpinfusor()
+	if imported then
+		return imported
+	end
+
 	local model, root = createRoot("SpinfusorViewmodel")
 	local parts = {}
 	local function add(part: BasePart, finishRole: string): BasePart
