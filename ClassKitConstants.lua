@@ -86,7 +86,6 @@ Constants.KITS = {
 			heatCooldownRate = 40,
 			overheatLockout = 1.5,
 			tracerColor = Color3.fromRGB(255, 225, 130),
-			singleShotCooldown = 0.42,
 		},
 		grenade = {
 			name = "Impact Nitron",
@@ -172,7 +171,6 @@ Constants.KITS = {
 			heatCooldownRate = 45,
 			overheatLockout = 1.4,
 			tracerColor = Color3.fromRGB(185, 105, 255),
-			singleShotCooldown = 0.28,
 		},
 		grenade = {
 			name = "Sticky Grenade",
@@ -214,7 +212,6 @@ Constants.KITS = {
 			heatCooldownRate = 35,
 			overheatLockout = 1.8,
 			tracerColor = Color3.fromRGB(255, 205, 95),
-			singleShotCooldown = 0.38,
 		},
 		grenade = {
 			name = "AP Grenade",
@@ -257,7 +254,6 @@ Constants.KITS = {
 			heatCooldownRate = 42,
 			overheatLockout = 1.5,
 			tracerColor = Color3.fromRGB(110, 255, 165),
-			singleShotCooldown = 0.33,
 		},
 		grenade = {
 			name = "TCN Grenade",
@@ -301,7 +297,6 @@ Constants.KITS = {
 			heatCooldownRate = 38,
 			overheatLockout = 1.7,
 			tracerColor = Color3.fromRGB(255, 215, 85),
-			singleShotCooldown = 0.31,
 		},
 		grenade = {
 			name = "EMP Grenade",
@@ -343,7 +338,6 @@ Constants.KITS = {
 			heatCooldownRate = 28,
 			overheatLockout = 2.2,
 			tracerColor = Color3.fromRGB(255, 145, 70),
-			singleShotCooldown = 0.48,
 		},
 		grenade = {
 			name = "Heavy AP Grenade",
@@ -387,7 +381,6 @@ Constants.KITS = {
 			tracerColor = Color3.fromRGB(255, 115, 95),
 			pellets = 8,
 			tracerWidth = 0.09,
-			singleShotCooldown = 0.7,
 		},
 		grenade = {
 			name = "Fractal Grenade",
@@ -431,7 +424,6 @@ Constants.KITS = {
 			heatCooldownRate = 26,
 			overheatLockout = 2.3,
 			tracerColor = Color3.fromRGB(255, 235, 90),
-			singleShotCooldown = 0.5,
 		},
 		grenade = {
 			name = "Frag Grenade",

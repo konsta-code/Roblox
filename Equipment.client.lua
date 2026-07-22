@@ -14,10 +14,12 @@ local player = Players.LocalPlayer
 local throwEvent = ReplicatedStorage:WaitForChild("ThrowGrenade")
 local throwFlagEvent = ReplicatedStorage:WaitForChild("ThrowFlag")
 local meleeEvent = ReplicatedStorage:WaitForChild("MeleeAttack")
+local carryStatusEvent = ReplicatedStorage:WaitForChild("FlagCarryStatus")
 
 local lastLocalThrow = -math.huge
 local lastLocalMelee = -math.huge
 local lastLocalFlagThrow = -math.huge
+local isCarryingFlag = false
 
 local function getAimDirection(): Vector3?
 	local camera = workspace.CurrentCamera
@@ -82,7 +84,7 @@ local function onMelee(_actionName: string, inputState: Enum.UserInputState): En
 end
 
 local function onThrowFlag(_actionName: string, inputState: Enum.UserInputState): Enum.ContextActionResult
-	if inputState ~= Enum.UserInputState.Begin or not canUseInput() then
+	if inputState ~= Enum.UserInputState.Begin or not canUseInput() or not isCarryingFlag then
 		return Enum.ContextActionResult.Pass
 	end
 	local now = os.clock()
@@ -109,3 +111,22 @@ ContextActionService:SetPosition("MeleeAttack", UDim2.new(1, -95, 1, -285))
 ContextActionService:BindAction("ThrowFlag", onThrowFlag, true, Enum.KeyCode.Z, Enum.KeyCode.ButtonY)
 ContextActionService:SetTitle("ThrowFlag", "PUNT")
 ContextActionService:SetPosition("ThrowFlag", UDim2.new(1, -285, 1, -210))
+
+local function refreshFlagButton()
+	local button = ContextActionService:GetButton("ThrowFlag")
+	if button then
+		button.Visible = isCarryingFlag
+	end
+end
+
+carryStatusEvent.OnClientEvent:Connect(function(carrying: boolean)
+	isCarryingFlag = carrying == true
+	refreshFlagButton()
+end)
+
+player.CharacterAdded:Connect(function()
+	isCarryingFlag = false
+	refreshFlagButton()
+end)
+
+task.defer(refreshFlagButton)

@@ -72,7 +72,7 @@ hint.BackgroundTransparency = 1
 hint.Font = Enum.Font.GothamBold
 hint.TextSize = 12
 hint.TextColor3 = Color3.fromRGB(150, 225, 245)
-hint.Text = "[Z] PRECISION SCOPE"
+hint.Text = "[C] PRECISION SCOPE"
 hint.Parent = scopeGui
 
 local function currentAutomatic(): ClassKitConstants.AutomaticProfile
@@ -95,14 +95,14 @@ local function refreshZoom()
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == Enum.KeyCode.Z then
+	if not processed and (input.KeyCode == Enum.KeyCode.C or input.KeyCode == Enum.KeyCode.ButtonL2) then
 		zoomHeld = true
 		refreshZoom()
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Z then
+	if input.KeyCode == Enum.KeyCode.C or input.KeyCode == Enum.KeyCode.ButtonL2 then
 		zoomHeld = false
 		refreshZoom()
 	end

@@ -235,6 +235,10 @@ local function damageInternal(
 	award: string?
 ): boolean
 	CombatService.Init()
+	local phase = MatchSignals.GetPhase()
+	if phase ~= "InProgress" and phase ~= "Overtime" then
+		return false
+	end
 	if (attacker and attacker.Parent ~= Players) or humanoid.Health <= 0 then
 		return false
 	end

@@ -126,6 +126,10 @@ local function findGenerator(instance: Instance?): GeneratorState?
 end
 
 local function damageGenerator(attacker: Player, state: GeneratorState, amount: number): boolean
+	local phase = MatchSignals.GetPhase()
+	if phase ~= "InProgress" and phase ~= "Overtime" then
+		return false
+	end
 	if attacker.Team == state.team or state.health <= 0 or amount <= 0 then
 		return false
 	end

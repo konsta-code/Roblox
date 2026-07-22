@@ -10,6 +10,7 @@
 -- Benötigt: RemoteEvent "SelectWeapon" in ReplicatedStorage (Client -> Server)
 
 local Players = game:GetService("Players")
+local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
@@ -58,6 +59,7 @@ local function selectWeapon(weapon: WeaponState.Weapon)
 		return
 	end
 	lastSelect = now
+	WeaponState.SetPrimaryDown(false)
 	WeaponState.Set(weapon)
 	selectEvent:FireServer(weapon)
 	refresh()
@@ -77,4 +79,50 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	elseif input.KeyCode == Enum.KeyCode.Two then
 		selectWeapon("Chaingun")
 	end
+end)
+
+local function primaryAction(_actionName: string, inputState: Enum.UserInputState): Enum.ContextActionResult
+	if inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+		WeaponState.SetPrimaryDown(false)
+		return Enum.ContextActionResult.Sink
+	end
+	if inputState ~= Enum.UserInputState.Begin
+		or player:GetAttribute("LoadoutMenuOpen")
+		or UserInputService:GetFocusedTextBox() ~= nil then
+		return Enum.ContextActionResult.Pass
+	end
+	WeaponState.SetPrimaryDown(true)
+	return Enum.ContextActionResult.Sink
+end
+
+ContextActionService:BindAction(
+	"PrimaryWeaponFire",
+	primaryAction,
+	true,
+	Enum.UserInputType.MouseButton1,
+	Enum.KeyCode.ButtonR2
+)
+ContextActionService:SetTitle("PrimaryWeaponFire", "FIRE")
+ContextActionService:SetPosition("PrimaryWeaponFire", UDim2.new(1, -95, 1, -210))
+
+local function swapAction(_actionName: string, inputState: Enum.UserInputState): Enum.ContextActionResult
+	if inputState ~= Enum.UserInputState.Begin or player:GetAttribute("LoadoutMenuOpen") then
+		return Enum.ContextActionResult.Pass
+	end
+	selectWeapon(if WeaponState.Get() == "Spinfusor" then "Chaingun" else "Spinfusor")
+	return Enum.ContextActionResult.Sink
+end
+
+ContextActionService:BindAction("SwapWeapon", swapAction, true, Enum.KeyCode.ButtonR1)
+ContextActionService:SetTitle("SwapWeapon", "SWAP")
+ContextActionService:SetPosition("SwapWeapon", UDim2.new(1, -190, 1, -285))
+
+player:GetAttributeChangedSignal("LoadoutMenuOpen"):Connect(function()
+	if player:GetAttribute("LoadoutMenuOpen") then
+		WeaponState.SetPrimaryDown(false)
+	end
+end)
+
+player.CharacterAdded:Connect(function()
+	WeaponState.SetPrimaryDown(false)
 end)

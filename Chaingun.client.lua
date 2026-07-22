@@ -11,9 +11,9 @@
 -- ist (WeaponState) - sonst liegt Linksklick beim Spinfusor.
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 
 local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
 local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
@@ -23,6 +23,7 @@ local fireEvent = ReplicatedStorage:WaitForChild("FireChaingun")
 local player = Players.LocalPlayer
 
 local lastShotTime = 0
+local firingStartedAt = 0
 
 local function drawTracer(origin: Vector3, endPoint: Vector3, color: Color3, width: number)
 	local distance = (endPoint - origin).Magnitude
@@ -65,18 +66,31 @@ local function fireOnce(profile: ClassKitConstants.AutomaticProfile)
 	WeaponFeedback.Fire("Chaingun")
 end
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+local function tryFire(isInitialPress: boolean)
+	if not WeaponState.IsPrimaryDown() then return end
 	if player:GetAttribute("LoadoutMenuOpen") then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
 	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end
 	if WeaponState.Get() ~= "Chaingun" then return end -- Linksklick nur wenn Chaingun gewählt
 	local now = os.clock()
 	local profile = ClassKitConstants.Get(player:GetAttribute("Loadout")).automatic
-	local cooldown = profile.singleShotCooldown or profile.maxFireInterval
+	if profile.singleShotCooldown and not isInitialPress then return end
+	local spinProgress = math.clamp((now - firingStartedAt) / math.max(profile.spinUpTime, 0.01), 0, 1)
+	local cooldown = profile.singleShotCooldown
+		or (profile.maxFireInterval - (profile.maxFireInterval - profile.minFireInterval) * spinProgress)
 	if now - lastShotTime < cooldown then return end
 	lastShotTime = now
 	WeaponFeedback.StartCooldown("Chaingun", cooldown)
 	fireOnce(profile)
+end
+
+WeaponState.PrimaryChanged:Connect(function(down: boolean)
+	if down then
+		firingStartedAt = os.clock()
+		tryFire(true)
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	tryFire(false)
 end)

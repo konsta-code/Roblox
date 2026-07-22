@@ -55,6 +55,32 @@ panel.BackgroundColor3 = Color3.fromRGB(16, 21, 30)
 panel.BorderSizePixel = 0
 panel.Parent = overlay
 
+local panelScale = Instance.new("UIScale")
+panelScale.Parent = panel
+
+local viewportConnection: RBXScriptConnection? = nil
+local function updatePanelScale()
+	local camera = workspace.CurrentCamera
+	if not camera then return end
+	local viewport = camera.ViewportSize
+	panelScale.Scale = math.clamp(math.min(viewport.X / 900, viewport.Y / 720), 0.62, 1)
+end
+
+local function bindViewport()
+	if viewportConnection then
+		viewportConnection:Disconnect()
+		viewportConnection = nil
+	end
+	local camera = workspace.CurrentCamera
+	if camera then
+		viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updatePanelScale)
+	end
+	updatePanelScale()
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindViewport)
+bindViewport()
+
 local panelCorner = Instance.new("UICorner")
 panelCorner.CornerRadius = UDim.new(0, 12)
 panelCorner.Parent = panel
@@ -89,7 +115,7 @@ statusLabel.BackgroundTransparency = 1
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 14
 statusLabel.TextColor3 = Color3.fromRGB(170, 185, 205)
-statusLabel.Text = "Auswahl gilt ab dem nächsten Spawn."
+statusLabel.Text = "Im Feld: nächster Spawn. An eigener Inventarstation: sofort."
 statusLabel.Parent = panel
 
 local cards: { [string]: TextButton } = {}

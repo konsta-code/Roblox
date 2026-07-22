@@ -3,7 +3,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local ClassKitConstants = require(ReplicatedStorage.Modules.ClassKitConstants)
 local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
@@ -13,8 +12,8 @@ local player = Players.LocalPlayer
 
 local lastFireTime = 0
 
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed or input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+local function firePrimary(down: boolean)
+	if not down then return end
 	if player:GetAttribute("LoadoutMenuOpen") then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
 	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end
@@ -35,6 +34,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	local direction = camera.CFrame.LookVector.Unit
 	fireEvent:FireServer(direction)
 	WeaponFeedback.Fire("Spinfusor")
-end)
+end
+
+WeaponState.PrimaryChanged:Connect(firePrimary)
 
 print("[Spinfusor] single-authority client loaded")

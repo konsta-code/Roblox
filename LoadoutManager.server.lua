@@ -9,6 +9,20 @@ local Constants = require(ReplicatedStorage.Modules.LoadoutConstants)
 local selectEvent = ReplicatedStorage:WaitForChild("SelectLoadout")
 local lastChange: { [Player]: number } = {}
 
+local function clearActiveAbility(player: Player, character: Model)
+	player:SetAttribute("AbilityActiveUntil", 0)
+	player:SetAttribute("AbilityReadyAt", 0)
+	player:SetAttribute("AbilityMoveScale", 1)
+	player:SetAttribute("AbilityDamageMultiplier", 1)
+	player:SetAttribute("AbilityDamageReduction", 0)
+	player:SetAttribute("IsCloaked", false)
+	for _, descendant in character:GetDescendants() do
+		if descendant.Name == "AbilityForceField" or descendant.Name == "AbilityHighlight" then
+			descendant:Destroy()
+		end
+	end
+end
+
 local function applyPlayerAttributes(player: Player, definition: Constants.LoadoutDefinition)
 	player:SetAttribute("ArmorClass", definition.armor)
 	player:SetAttribute("MaxEnergy", definition.maxEnergy)
@@ -84,6 +98,21 @@ selectEvent.OnServerEvent:Connect(function(player: Player, requestedLoadout: any
 		return
 	end
 	lastChange[player] = now
+	local accessUntil = player:GetAttribute("InventoryAccessUntil")
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if typeof(accessUntil) == "number" and accessUntil >= now
+		and character and humanoid and humanoid.Health > 0 then
+		-- The station granted this short access window after validating team,
+		-- proximity and generator power, so a live class swap is safe here.
+		player:SetAttribute("Loadout", loadoutId)
+		player:SetAttribute("PendingLoadout", nil)
+		clearActiveAbility(player, character)
+		applyLoadout(player, character)
+		player:SetAttribute("InventoryAccessUntil", 0)
+		selectEvent:FireClient(player, true, definition.displayName .. " sofort ausgerüstet")
+		return
+	end
 	-- Auswahl NUR als AUSSTEHEND merken (PendingLoadout). Das aktive Loadout-
 	-- Attribut, das Waffen/Fähigkeit/Granate/HUD/Viewmodel live lesen, wechselt
 	-- erst beim nächsten Respawn (applyLoadout übernimmt PendingLoadout beim

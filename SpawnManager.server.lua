@@ -137,9 +137,24 @@ local function teleportToTeamSpawn(player: Player)
 	grantSpawnProtection(character)
 end
 
+local function preparePlayerForRound(player: Player)
+	if player.Parent ~= Players then return end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not character or not humanoid or humanoid.Health <= 0 then
+		-- A death during the final warmup second must not make a player miss
+		-- the round start. A fresh character also applies a pending loadout.
+		player:LoadCharacter()
+		character = player.Character or player.CharacterAdded:Wait()
+		if player.Parent ~= Players or not character.Parent then return end
+		character:WaitForChild("HumanoidRootPart", 5)
+	end
+	teleportToTeamSpawn(player)
+end
+
 MatchSignals.RoundStarted:Connect(function()
 	for _, player in Players:GetPlayers() do
-		teleportToTeamSpawn(player)
+		task.spawn(preparePlayerForRound, player)
 	end
 end)
 
