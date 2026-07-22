@@ -148,8 +148,6 @@ cooldownLabel.TextColor3 = Color3.fromRGB(150, 245, 205)
 cooldownLabel.TextSize = 9
 cooldownLabel.Parent = cooldownFrame
 
-local jetpackTargetRatio = 1
-
 local speedFrame = Instance.new("Frame")
 speedFrame.Name = "SpeedReadout"
 speedFrame.Size = UDim2.fromOffset(150, 34)
@@ -173,11 +171,7 @@ speedLabel.TextColor3 = Color3.fromRGB(145, 225, 255)
 speedLabel.TextSize = 15
 speedLabel.Parent = speedFrame
 
-RunService.RenderStepped:Connect(function(dt)
-	jetpackFill.Size = jetpackFill.Size:Lerp(
-		UDim2.new(jetpackTargetRatio, 0, 1, 0),
-		math.clamp(dt * 12, 0, 1)
-	)
+RunService.RenderStepped:Connect(function()
 	local selected = WeaponState.Get()
 	local startedAt, duration = WeaponFeedback.GetCooldown(selected)
 	local elapsed = os.clock() - startedAt
@@ -706,7 +700,8 @@ syncMatchState()
 
 PlayerHudState.JetpackEnergyChanged:Connect(function(energy: number)
 	local maxEnergy = player:GetAttribute("MaxEnergy")
-	jetpackTargetRatio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
+	local ratio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
+	jetpackFill.Size = UDim2.new(ratio, 0, 1, 0)
 end)
 
 local function bindHealth(character: Model)
