@@ -119,6 +119,8 @@ statusLabel.Text = "Im Feld: nächster Spawn. An eigener Inventarstation: sofort
 statusLabel.Parent = panel
 
 local cards: { [string]: TextButton } = {}
+local cardStrokes: { [string]: UIStroke } = {}
+local cardAccents: { [string]: Color3 } = {}
 
 for index, loadoutId in Constants.ORDER do
 	local definition = Constants.LOADOUTS[loadoutId]
@@ -155,20 +157,32 @@ for index, loadoutId in Constants.ORDER do
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)
 	corner.Parent = card
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = kit.disc.projectileColor
+	stroke.Transparency = 0.48
+	stroke.Thickness = 1.4
+	stroke.Parent = card
 
 	card.Activated:Connect(function()
 		statusLabel.Text = definition.displayName .. " wird angefordert ..."
 		selectEvent:FireServer(loadoutId)
 	end)
 	cards[loadoutId] = card
+	cardStrokes[loadoutId] = stroke
+	cardAccents[loadoutId] = kit.disc.projectileColor
 end
 
 local function refreshCards()
 	local selected = player:GetAttribute("Loadout")
 	for loadoutId, card in cards do
-		card.BackgroundColor3 = if loadoutId == selected
-			then Color3.fromRGB(42, 105, 150)
-			else Color3.fromRGB(30, 38, 52)
+		local isSelected = loadoutId == selected
+		local accent = cardAccents[loadoutId] or Color3.fromRGB(80, 180, 235)
+		card.BackgroundColor3 = accent:Lerp(Color3.fromRGB(18, 25, 36), if isSelected then 0.38 else 0.82)
+		local stroke = cardStrokes[loadoutId]
+		if stroke then
+			stroke.Transparency = isSelected and 0.05 or 0.55
+			stroke.Thickness = isSelected and 2.2 or 1.2
+		end
 	end
 end
 

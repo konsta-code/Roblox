@@ -1,0 +1,14 @@
+{
+  "name": "TITAN ALPINE",
+  "blend": "CTFGame_TitanAlpine_v01.blend",
+  "fbx": "export/CTFGame_TitanAlpine_v01.fbx",
+  "objects": 201,
+  "triangles": 21612,
+  "scale_roblox_studs_per_meter": 20,
+  "previews": [
+    "previews/TitanAlpine_Aerial.png",
+    "previews/TitanAlpine_CoreRoute.png",
+    "previews/TitanAlpine_RedApproach.png",
+    "previews/TitanAlpine_BlueApproach.png"
+  ]
+}

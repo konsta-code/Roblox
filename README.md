@@ -52,6 +52,7 @@ Zusätzlich zum finalen Spinfusor enthält `art_source/` jetzt:
 - 27 Blender-Waffenmodelle für alle neun Klassen (Disc, Automatik, Granate),
 - 27 Roblox-fertige FBX-Exporte und 27 gerenderte Vorschauen,
 - neun modulare Blender-Klassenrüstungen mit FBX und Vorschau,
+- die komplette Titan-Alpine-Karte als Blender-Datei, FBX und vier Ansichten,
 - automatische Triangle-/Asset-Berichte und reproduzierbare Build-Skripte.
 
 Die vollständige Zuordnung steht in `art_source/ASSET_MANIFEST.md`. Bis neue

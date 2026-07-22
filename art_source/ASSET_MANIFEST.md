@@ -26,6 +26,16 @@ The game immediately displays lightweight server-replicated versions through
 `CharacterPresentation.server.lua`. Imported meshes can replace those parts
 later without changing gameplay or hitboxes.
 
+## Titan Alpine environment
+
+`environment/titan_alpine_v01/CTFGame_TitanAlpine_v01.blend` is the editable
+environment source for the mirrored CTF arena. It includes the core ski route,
+two flank lanes, highland rims, both bases, canyon silhouettes and navigation
+beacons. The complete FBX has 201 objects / 21,612 triangles at the same
+20-studs-per-meter scale used by the movement constants. The live game keeps
+using `MapBuilder.server.lua`, which produces collision-safe slopes and all
+gameplay tags automatically.
+
 ## Rebuilding
 
 Both packs are deterministic Blender scripts and can be regenerated headless:
@@ -33,6 +43,7 @@ Both packs are deterministic Blender scripts and can be regenerated headless:
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python .\art_source\weapons\arsenal_v01\build_arsenal.py
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python .\art_source\characters\class_armor_v01\build_class_armor.py
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python .\art_source\environment\titan_alpine_v01\build_titan_alpine.py
 ```
 
 FBX files must be uploaded/imported through Roblox Studio or Open Cloud before

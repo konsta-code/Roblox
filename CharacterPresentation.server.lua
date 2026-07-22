@@ -77,8 +77,8 @@ local function buildPresentation(player: Player, character: Model)
 	local secondary = kit.automatic.tracerColor
 	local graphite = Color3.fromRGB(19, 27, 38)
 	local steel = Color3.fromRGB(72, 84, 98)
-	local heavy = definition.armor == "Heavy"
-	local medium = definition.armor == "Medium"
+	local heavy = definition.armor == "HEAVY"
+	local medium = definition.armor == "MEDIUM"
 	local scale = if heavy then 1.18 elseif medium then 1.04 else 0.9
 
 	local model = Instance.new("Model")
