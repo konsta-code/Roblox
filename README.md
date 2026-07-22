@@ -10,6 +10,8 @@ rojo serve default.project.json
 ```
 
 Danach Roblox Studio mit `localhost:34872` verbinden und **Play (F5)** starten.
+Alternativ startet ein Doppelklick auf `Start-CTFGame.cmd` Rojo dauerhaft im
+Hintergrund; das Startfenster darf danach geschlossen werden.
 Die große Karte wird beim Serverstart von `MapBuilder.server.lua` erzeugt; im
 reinen Edit-Modus kann deshalb zunächst nur die Baseplate sichtbar sein.
 
