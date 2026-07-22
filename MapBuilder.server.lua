@@ -56,6 +56,13 @@ local function slab(name, size, cframe, color, material, parent, canCollide)
 	p.Anchored = true
 	p.Color = color
 	p.Material = material or Enum.Material.SmoothPlastic
+	if p.Material == Enum.Material.Metal or p.Material == Enum.Material.DiamondPlate then
+		p.Reflectance = 0.12
+	elseif p.Material == Enum.Material.Ice or p.Material == Enum.Material.Glacier then
+		p.Reflectance = 0.045
+	elseif p.Material == Enum.Material.Glass then
+		p.Reflectance = 0.16
+	end
 	p.CanCollide = if canCollide == nil then true else canCollide
 	p.CanTouch = false
 	p.TopSurface = Enum.SurfaceType.Smooth

@@ -77,6 +77,15 @@ Nach dem Import unter `ReplicatedStorage/WeaponAssets` erkennt das Spiel alle
 Klassenwechsel neu auf. Die vorhandene `WeaponAssets/Spinfusor`-Waffe bleibt
 als kompatibler Fallback erhalten.
 
+## Runtime Art Pass
+
+`MapArt.server.lua` legt einen nicht kollidierenden High-Fidelity-Layer über
+die bewährte Gameplay-Geometrie: organische Schneebänke, mehrschichtige
+Felsmassive, Wind-Eis, atmosphärische Tiefenstaffelung und abgerundete
+Basis-Hüllen. `WorldEnvironment.server.lua` ergänzt das filmische alpine
+Lighting. Charakterpanzerung nutzt glatte Hard-Surface-Panels; importierte
+Klassenwaffen werden automatisch auch als Third-Person-Modelle verwendet.
+
 ## Release-Prüfung
 
 ```powershell
