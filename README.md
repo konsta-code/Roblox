@@ -59,6 +59,12 @@ Die vollständige Zuordnung steht in `art_source/ASSET_MANIFEST.md`. Bis neue
 Mesh-Uploads Roblox-Asset-IDs besitzen, zeigt das Spiel alle Klassen bereits
 mit performanter replizierter Rüstung und Third-Person-Waffenmodell.
 
+Die genaue Studio-Importreihenfolge steht in `art_source/STUDIO_IMPORT.md`.
+Nach dem Import unter `ReplicatedStorage/WeaponAssets` erkennt das Spiel alle
+18 Klassenwaffen und neun Granaten automatisch und baut das Viewmodel beim
+Klassenwechsel neu auf. Die vorhandene `WeaponAssets/Spinfusor`-Waffe bleibt
+als kompatibler Fallback erhalten.
+
 ## Release-Prüfung
 
 ```powershell

@@ -1,6 +1,6 @@
 -- WeaponViewmodel.client.lua
--- First-Person-Viewmodel. Bevorzugt das importierte Spinfusor-Mesh und nutzt
--- die prozedurale Version als Fallback, falls das Asset nicht vorhanden ist.
+-- First-Person-Viewmodel. Bevorzugt die klassenspezifischen Blender-Meshes und
+-- nutzt die prozeduralen Waffen als Fallback, falls ein Asset noch fehlt.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,9 +13,30 @@ local WeaponFeedback = require(ReplicatedStorage.Modules.WeaponFeedback)
 
 local player = Players.LocalPlayer
 local VIEWMODEL_SCALE = 0.72
-local IMPORTED_SPINFUSOR_LENGTH = 2.5
-local IMPORTED_SPINFUSOR_OFFSET = CFrame.new(0.28, -0.6, 0.15)
-local IMPORTED_SPINFUSOR_MUZZLE = CFrame.new(0.28, -0.58, -1.3)
+local IMPORTED_WEAPON_LENGTH = {
+	Spinfusor = 2.5,
+	Chaingun = 3.15,
+}
+local IMPORTED_WEAPON_OFFSET = {
+	Spinfusor = CFrame.new(0.28, -0.6, 0.15),
+	Chaingun = CFrame.new(0.3, -0.58, 0.12),
+}
+local IMPORTED_WEAPON_MUZZLE = {
+	Spinfusor = CFrame.new(0.28, -0.58, -1.3),
+	Chaingun = CFrame.new(0.3, -0.52, -1.72),
+}
+
+local IMPORTED_ASSET_NAMES = {
+	Pathfinder = { Spinfusor = "Pathfinder_LightSpinfusor", Chaingun = "Pathfinder_LightAssaultRifle" },
+	Sentinel = { Spinfusor = "Sentinel_NovaBlaster", Chaingun = "Sentinel_BXT1Rifle" },
+	Infiltrator = { Spinfusor = "Infiltrator_StealthSpinfusor", Chaingun = "Infiltrator_RhinoSMG" },
+	Soldier = { Spinfusor = "Soldier_Spinfusor", Chaingun = "Soldier_AssaultRifle" },
+	Technician = { Spinfusor = "Technician_Thumper", Chaingun = "Technician_TCN4SMG" },
+	Raider = { Spinfusor = "Raider_ARXBuster", Chaingun = "Raider_NJ5SMG" },
+	Juggernaut = { Spinfusor = "Juggernaut_HeavySpinfusor", Chaingun = "Juggernaut_X1LMG" },
+	Brute = { Spinfusor = "Brute_BruteSpinfusor", Chaingun = "Brute_AutoShotgun" },
+	Doombringer = { Spinfusor = "Doombringer_SaberLauncher", Chaingun = "Doombringer_Chaingun" },
+}
 
 type WeaponTheme = {
 	armor: Color3,
@@ -225,44 +246,66 @@ local function createRoot(name: string): (Model, BasePart)
 	return model, root
 end
 
-local function createImportedSpinfusor(): ViewModel?
+local function createImportedWeapon(slotName: string): ViewModel?
 	local weaponAssets = ReplicatedStorage:FindFirstChild("WeaponAssets")
-	local template = weaponAssets and weaponAssets:FindFirstChild("Spinfusor")
-	if not template or not template:IsA("Model") then
+	if not weaponAssets then
 		return nil
 	end
 
-	local model, root = createRoot("SpinfusorViewmodel")
+	local loadout = tostring(player:GetAttribute("Loadout") or "Pathfinder")
+	local classAssets = IMPORTED_ASSET_NAMES[loadout]
+	local assetName = classAssets and classAssets[slotName]
+	local template = assetName and weaponAssets:FindFirstChild(assetName, true)
+	-- Abwärtskompatibel zum bereits manuell importierten Spinfusor.
+	if not template and slotName == "Spinfusor" then
+		template = weaponAssets:FindFirstChild("Spinfusor")
+	end
+	if not template or (not template:IsA("Model") and not template:IsA("BasePart")) then
+		return nil
+	end
+
+	local model, root = createRoot(slotName .. "Viewmodel")
 	model:SetAttribute("UsesImportedMesh", true)
 	local imported = template:Clone()
-	imported.Name = "ImportedSpinfusor"
+	imported.Name = "Imported_" .. (assetName or "Spinfusor")
 	imported.Parent = model
-	local bounds = imported:GetExtentsSize()
+	local bounds = if imported:IsA("Model") then imported:GetExtentsSize() else imported.Size
 	local longestAxis = math.max(bounds.X, bounds.Y, bounds.Z)
 	if longestAxis <= 0 then
 		model:Destroy()
 		return nil
 	end
-	imported:ScaleTo(IMPORTED_SPINFUSOR_LENGTH / longestAxis)
-	imported:PivotTo(root.CFrame * IMPORTED_SPINFUSOR_OFFSET)
+	local scale = IMPORTED_WEAPON_LENGTH[slotName] / longestAxis
+	if imported:IsA("Model") then
+		imported:ScaleTo(scale)
+		imported:PivotTo(root.CFrame * IMPORTED_WEAPON_OFFSET[slotName])
+	else
+		imported.Size *= scale
+		imported.CFrame = root.CFrame * IMPORTED_WEAPON_OFFSET[slotName]
+	end
 
 	local parts = {}
+	local function configureImportedPart(part: BasePart)
+		part.Anchored = false
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.CastShadow = false
+		part.Massless = true
+		part:SetAttribute("FinishRole", "ImportedMesh")
+		table.insert(parts, part)
+
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = part
+		weld.Parent = part
+	end
+	if imported:IsA("BasePart") then
+		configureImportedPart(imported)
+	end
 	for _, descendant in imported:GetDescendants() do
 		if descendant:IsA("BasePart") then
-			descendant.Anchored = false
-			descendant.CanCollide = false
-			descendant.CanTouch = false
-			descendant.CanQuery = false
-			descendant.CastShadow = false
-			descendant.Massless = true
-			descendant.Color = Color3.new(1, 1, 1)
-			descendant:SetAttribute("FinishRole", "ImportedMesh")
-			table.insert(parts, descendant)
-
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = root
-			weld.Part1 = descendant
-			weld.Parent = descendant
+			configureImportedPart(descendant)
 		end
 	end
 
@@ -278,17 +321,17 @@ local function createImportedSpinfusor(): ViewModel?
 		Vector3.new(0.4, 0.4, 0.4),
 		Color3.fromRGB(75, 205, 255),
 		Enum.Material.Neon,
-		IMPORTED_SPINFUSOR_MUZZLE,
+		IMPORTED_WEAPON_MUZZLE[slotName],
 		Enum.PartType.Ball
 	)
 	muzzle.Size = Vector3.new(0.26, 0.26, 0.26)
 	muzzle.LocalTransparencyModifier = 1
-	print("[WeaponViewmodel] Spinfusor mesh loaded: rbxassetid://72177953697579")
+	print(string.format("[WeaponViewmodel] Imported %s asset loaded for %s: %s", slotName, loadout, template:GetFullName()))
 	return { model = model, root = root, parts = parts, muzzle = muzzle }
 end
 
 local function createSpinfusor(): ViewModel
-	local imported = createImportedSpinfusor()
+	local imported = createImportedWeapon("Spinfusor")
 	if imported then
 		return imported
 	end
@@ -359,6 +402,11 @@ local function createSpinfusor(): ViewModel
 end
 
 local function createChaingun(): ViewModel
+	local imported = createImportedWeapon("Chaingun")
+	if imported then
+		return imported
+	end
+
 	local model, root = createRoot("ChaingunViewmodel")
 	local parts = {}
 	local function add(part: BasePart, finishRole: string): BasePart
@@ -424,7 +472,10 @@ local viewmodels = {
 	Chaingun = chaingun,
 }
 
-for _, viewmodel in viewmodels do
+local function addMuzzleLight(viewmodel: ViewModel)
+	if viewmodel.muzzle:FindFirstChild("MuzzleLight") then
+		return
+	end
 	local light = Instance.new("PointLight")
 	light.Name = "MuzzleLight"
 	light.Color = viewmodel.muzzle.Color
@@ -433,6 +484,10 @@ for _, viewmodel in viewmodels do
 	light.Shadows = false
 	light.Enabled = false
 	light.Parent = viewmodel.muzzle
+end
+
+for _, viewmodel in viewmodels do
+	addMuzzleLight(viewmodel)
 end
 
 local function addClassAccessory(
@@ -499,14 +554,20 @@ local automaticAccessories = {
 	Doombringer = { "ChainHousing", Vector3.new(1.38, 0.38, 1.7), CFrame.new(0, 0.58, -0.45), nil },
 }
 
-if not spinfusor.model:GetAttribute("UsesImportedMesh") then
-	for className, definition in discAccessories do
-		addClassAccessory(spinfusor, className, definition[1], definition[2], definition[3], definition[4])
+local function addProceduralClassAccessories()
+	if not spinfusor.model:GetAttribute("UsesImportedMesh") then
+		for className, definition in discAccessories do
+			addClassAccessory(spinfusor, className, definition[1], definition[2], definition[3], definition[4])
+		end
+	end
+	if not chaingun.model:GetAttribute("UsesImportedMesh") then
+		for className, definition in automaticAccessories do
+			addClassAccessory(chaingun, className, definition[1], definition[2], definition[3], definition[4])
+		end
 	end
 end
-for className, definition in automaticAccessories do
-	addClassAccessory(chaingun, className, definition[1], definition[2], definition[3], definition[4])
-end
+
+addProceduralClassAccessories()
 
 local recoil = 0
 local meleeSwing = 0
@@ -624,10 +685,28 @@ local function applyKitColors()
 	updateMarkings(chaingun, kit.automatic.name, string.upper(tostring(loadout)) .. " // KINETIC", kit.automatic.tracerColor)
 end
 
+local function rebuildViewmodels()
+	local oldSpinfusor = spinfusor
+	local oldChaingun = chaingun
+
+	spinfusor = createSpinfusor()
+	chaingun = createChaingun()
+	viewmodels.Spinfusor = spinfusor
+	viewmodels.Chaingun = chaingun
+	addMuzzleLight(spinfusor)
+	addMuzzleLight(chaingun)
+	addProceduralClassAccessories()
+	applyKitColors()
+	parentToCamera()
+
+	oldSpinfusor.model:Destroy()
+	oldChaingun.model:Destroy()
+end
+
 WeaponState.Changed:Connect(function()
 	switchDrop = 1
 end)
-player:GetAttributeChangedSignal("Loadout"):Connect(applyKitColors)
+player:GetAttributeChangedSignal("Loadout"):Connect(rebuildViewmodels)
 
 WeaponFeedback.Fired:Connect(function(weapon: WeaponFeedback.Weapon)
 	if weapon == "Melee" then

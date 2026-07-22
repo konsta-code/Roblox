@@ -33,6 +33,18 @@ local grenades: { Grenade } = {}
 local lastThrow: { [Player]: number } = {}
 local lastMelee: { [Player]: number } = {}
 
+local GRENADE_ASSET_NAMES = {
+	Pathfinder = "Pathfinder_ImpactNitron",
+	Sentinel = "Sentinel_GrenadeXL",
+	Infiltrator = "Infiltrator_StickyGrenade",
+	Soldier = "Soldier_APGrenade",
+	Technician = "Technician_TCNGrenade",
+	Raider = "Raider_EMPGrenade",
+	Juggernaut = "Juggernaut_HeavyAPGrenade",
+	Brute = "Brute_FractalGrenade",
+	Doombringer = "Doombringer_FragGrenade",
+}
+
 local function isFiniteVector(value: any): boolean
 	return typeof(value) == "Vector3"
 		and value.X == value.X
@@ -54,6 +66,67 @@ end
 local function refillGrenades(player: Player)
 	local maxGrenades = player:GetAttribute("MaxGrenades")
 	setGrenadeAmmo(player, typeof(maxGrenades) == "number" and maxGrenades or Constants.MAX_GRENADES)
+end
+
+local function addImportedGrenadeVisual(part: BasePart, loadout: string): boolean
+	local weaponAssets = ReplicatedStorage:FindFirstChild("WeaponAssets")
+	local assetName = GRENADE_ASSET_NAMES[loadout]
+	local template = weaponAssets and assetName and weaponAssets:FindFirstChild(assetName, true)
+	if not template or (not template:IsA("Model") and not template:IsA("BasePart")) then
+		return false
+	end
+
+	local visual = template:Clone()
+	visual.Name = "ImportedVisual"
+	visual.Parent = part
+	local bounds = if visual:IsA("Model") then visual:GetExtentsSize() else visual.Size
+	local longestAxis = math.max(bounds.X, bounds.Y, bounds.Z)
+	if longestAxis <= 0 then
+		visual:Destroy()
+		return false
+	end
+
+	local scale = 1.05 / longestAxis
+	if visual:IsA("Model") then
+		visual:ScaleTo(scale)
+		visual:PivotTo(part.CFrame)
+	else
+		visual.Size *= scale
+		visual.CFrame = part.CFrame
+	end
+
+	local visualPartCount = 0
+	for _, descendant in visual:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = false
+			descendant.CanCollide = false
+			descendant.CanTouch = false
+			descendant.CanQuery = false
+			descendant.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = part
+			weld.Part1 = descendant
+			weld.Parent = descendant
+			visualPartCount += 1
+		end
+	end
+	if visual:IsA("BasePart") then
+		visual.Anchored = false
+		visual.CanCollide = false
+		visual.CanTouch = false
+		visual.CanQuery = false
+		visual.Massless = true
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = part
+		weld.Part1 = visual
+		weld.Parent = visual
+		visualPartCount += 1
+	end
+	if visualPartCount == 0 then
+		visual:Destroy()
+		return false
+	end
+	return true
 end
 
 local function showExplosion(position: Vector3, profile: ClassKitConstants.GrenadeProfile)
@@ -153,6 +226,9 @@ local function spawnGrenade(
 	part.Material = Enum.Material.Metal
 	part.Color = profile.color
 	part.Parent = workspace
+	if addImportedGrenadeVisual(part, tostring(player:GetAttribute("Loadout") or "Pathfinder")) then
+		part.Transparency = 1
+	end
 
 	local attachment0 = Instance.new("Attachment")
 	attachment0.Position = Vector3.new(0, 0.25, 0)
