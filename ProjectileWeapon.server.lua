@@ -106,6 +106,54 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	flash.Parent = sphere
 	flash:Emit(math.clamp(math.floor(profile.splashRadius * 1.5), 12, 38))
 
+	local vapor = Instance.new("ParticleEmitter")
+	vapor.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	vapor.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.55)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(34, 48, 64)),
+	})
+	vapor.LightEmission = 0.35
+	vapor.Lifetime = NumberRange.new(0.45, 0.9)
+	vapor.Speed = NumberRange.new(4, 13)
+	vapor.Drag = 4
+	vapor.SpreadAngle = Vector2.new(180, 180)
+	vapor.Rate = 0
+	vapor.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(0.35, 2.2),
+		NumberSequenceKeypoint.new(1, 4.8),
+	})
+	vapor.Transparency = NumberSequence.new(0.18, 1)
+	vapor.Parent = sphere
+	vapor:Emit(math.clamp(math.floor(profile.splashRadius * 0.75), 8, 24))
+
+	-- Three staggered plasma shells give the disc an energy-wave silhouette at
+	-- long range, while remaining non-queryable and extremely short-lived.
+	for waveIndex = 1, 3 do
+		local wave = Instance.new("Part")
+		wave.Name = "PlasmaWave"
+		wave.Shape = Enum.PartType.Ball
+		wave.Size = Vector3.one * (0.8 + waveIndex * 0.35)
+		wave.Position = position
+		wave.Anchored = true
+		wave.CanCollide = false
+		wave.CanQuery = false
+		wave.CanTouch = false
+		wave.Material = Enum.Material.ForceField
+		wave.Color = profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.18 * waveIndex)
+		wave.Transparency = 0.28 + waveIndex * 0.1
+		wave.Parent = workspace
+		local delayTime = (waveIndex - 1) * 0.035
+		task.delay(delayTime, function()
+			if not wave.Parent then return end
+			TweenService:Create(wave, TweenInfo.new(0.24 + waveIndex * 0.055, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.one * profile.splashRadius * (1.25 + waveIndex * 0.28),
+				Transparency = 1,
+			}):Play()
+		end)
+		Debris:AddItem(wave, 0.55)
+	end
+
 	local impactSound = Instance.new("Sound")
 	impactSound.SoundId = "rbxasset://sounds/impact_explosion_03.mp3"
 	impactSound.Volume = 0.5
@@ -263,6 +311,30 @@ local function spawnProjectile(
 	part.Material = Enum.Material.Neon
 	part.Color = profile.projectileColor
 	part.Parent = workspace
+
+	local core = Instance.new("Part")
+	core.Name = "DiscCore"
+	core.Shape = Enum.PartType.Ball
+	core.Size = part.Size * 0.48
+	core.CFrame = part.CFrame
+	core.Anchored = false
+	core.CanCollide = false
+	core.CanQuery = false
+	core.CanTouch = false
+	core.Massless = true
+	core.Material = Enum.Material.Neon
+	core.Color = profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.72)
+	core.Parent = part
+	local coreWeld = Instance.new("WeldConstraint")
+	coreWeld.Part0 = part
+	coreWeld.Part1 = core
+	coreWeld.Parent = core
+	local projectileLight = Instance.new("PointLight")
+	projectileLight.Color = profile.projectileColor
+	projectileLight.Brightness = 2.4
+	projectileLight.Range = math.clamp(profile.splashRadius * 0.55, 10, 22)
+	projectileLight.Shadows = false
+	projectileLight.Parent = part
 
 	local trailTop = Instance.new("Attachment")
 	trailTop.Position = Vector3.new(0, profile.projectileRadius * 0.45, 0)

@@ -419,6 +419,75 @@ local winnerCorner = Instance.new("UICorner")
 winnerCorner.CornerRadius = UDim.new(0, 12)
 winnerCorner.Parent = winnerOverlay
 
+local roundIntro = Instance.new("CanvasGroup")
+roundIntro.Name = "RoundIntro"
+roundIntro.Size = UDim2.fromOffset(720, 132)
+roundIntro.AnchorPoint = Vector2.new(0.5, 0.5)
+roundIntro.Position = UDim2.fromScale(0.5, 0.43)
+roundIntro.BackgroundColor3 = Color3.fromRGB(4, 10, 18)
+roundIntro.BackgroundTransparency = 0.12
+roundIntro.BorderSizePixel = 0
+roundIntro.GroupTransparency = 1
+roundIntro.Visible = false
+roundIntro.ZIndex = 20
+roundIntro.Parent = screenGui
+local roundIntroCorner = Instance.new("UICorner")
+roundIntroCorner.CornerRadius = UDim.new(0, 12)
+roundIntroCorner.Parent = roundIntro
+local roundIntroStroke = Instance.new("UIStroke")
+roundIntroStroke.Color = Color3.fromRGB(92, 222, 255)
+roundIntroStroke.Thickness = 2
+roundIntroStroke.Transparency = 0.18
+roundIntroStroke.Parent = roundIntro
+local roundIntroTitle = Instance.new("TextLabel")
+roundIntroTitle.Size = UDim2.new(1, -36, 0, 74)
+roundIntroTitle.Position = UDim2.fromOffset(18, 10)
+roundIntroTitle.BackgroundTransparency = 1
+roundIntroTitle.Font = Enum.Font.GothamBlack
+roundIntroTitle.Text = "BATTLE ON TITAN"
+roundIntroTitle.TextColor3 = Color3.fromRGB(235, 247, 255)
+roundIntroTitle.TextSize = 34
+roundIntroTitle.ZIndex = 21
+roundIntroTitle.Parent = roundIntro
+local roundIntroSubtitle = Instance.new("TextLabel")
+roundIntroSubtitle.Size = UDim2.new(1, -36, 0, 34)
+roundIntroSubtitle.Position = UDim2.fromOffset(18, 78)
+roundIntroSubtitle.BackgroundTransparency = 1
+roundIntroSubtitle.Font = Enum.Font.GothamBold
+roundIntroSubtitle.Text = "CAPTURE THE FLAG // CONTROL THE CORE"
+roundIntroSubtitle.TextColor3 = Color3.fromRGB(106, 220, 255)
+roundIntroSubtitle.TextSize = 14
+roundIntroSubtitle.ZIndex = 21
+roundIntroSubtitle.Parent = roundIntro
+local roundIntroSequence = 0
+
+local function showRoundIntro(title: string, subtitle: string, color: Color3)
+	roundIntroSequence += 1
+	local sequence = roundIntroSequence
+	roundIntroTitle.Text = title
+	roundIntroSubtitle.Text = subtitle
+	roundIntroSubtitle.TextColor3 = color
+	roundIntroStroke.Color = color
+	roundIntro.Position = UDim2.fromScale(0.5, 0.45)
+	roundIntro.GroupTransparency = 1
+	roundIntro.Visible = true
+	TweenService:Create(roundIntro, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+		Position = UDim2.fromScale(0.5, 0.43),
+		GroupTransparency = 0,
+	}):Play()
+	task.delay(1.75, function()
+		if sequence ~= roundIntroSequence or not roundIntro.Parent then return end
+		local tween = TweenService:Create(roundIntro, TweenInfo.new(0.42, Enum.EasingStyle.Quad), {
+			Position = UDim2.fromScale(0.5, 0.4),
+			GroupTransparency = 1,
+		})
+		tween:Play()
+		tween.Completed:Once(function()
+			if sequence == roundIntroSequence then roundIntro.Visible = false end
+		end)
+	end)
+end
+
 local combatFeed = Instance.new("Frame")
 combatFeed.Name = "CombatFeed"
 combatFeed.Size = UDim2.fromOffset(360, 160)
@@ -718,7 +787,17 @@ local PHASE_LABELS = {
 	PostMatch = "Rundenende",
 }
 
+local lastPresentedPhase: string? = nil
+
 local function applyMatchState(phase: string, timeRemaining: number, winnerName: string?)
+	if phase ~= lastPresentedPhase then
+		lastPresentedPhase = phase
+		if phase == "InProgress" then
+			showRoundIntro("BATTLE ON TITAN", "CAPTURE THE FLAG // CONTROL THE CORE", Color3.fromRGB(92, 222, 255))
+		elseif phase == "Overtime" then
+			showRoundIntro("OVERTIME", "NEXT CAPTURE WINS", Color3.fromRGB(255, 184, 70))
+		end
+	end
 	phaseLabel.Text = string.format("%s - %s", PHASE_LABELS[phase] or phase, formatTime(timeRemaining))
 	phaseLabel.TextColor3 = if phase == "Overtime"
 		then Color3.fromRGB(255, 190, 70)

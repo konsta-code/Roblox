@@ -182,6 +182,159 @@ for x = -470, 470, 94 do
 	end
 end
 
+local function addTitanReactor()
+	local reactor = Instance.new("Folder")
+	reactor.Name = "TitanReactorLandmark"
+	reactor.Parent = art
+	local cyan = Color3.fromRGB(83, 219, 255)
+	local center = Vector3.new(0, 76, 0)
+
+	local core = visualPart(
+		"ReactorCore",
+		Vector3.new(42, 8, 8),
+		CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90)),
+		cyan,
+		Enum.Material.Neon,
+		reactor
+	)
+	core.Shape = Enum.PartType.Cylinder
+	core.Transparency = 0.12
+	local coreLight = Instance.new("PointLight")
+	coreLight.Color = cyan
+	coreLight.Brightness = 4.5
+	coreLight.Range = 95
+	coreLight.Shadows = true
+	coreLight.Parent = core
+
+	for ringIndex, radius in { 22, 32, 43 } do
+		for segment = 0, 11 do
+			local angle = segment / 12 * math.pi * 2 + ringIndex * 0.17
+			local segmentPosition = center + Vector3.new(math.cos(angle) * radius, math.sin(angle) * radius, 0)
+			local segmentPart = visualPart(
+				"ReactorRing" .. ringIndex,
+				Vector3.new(10.5, 2.2 + ringIndex * 0.35, 3.2),
+				CFrame.new(segmentPosition) * CFrame.Angles(0, 0, angle + math.pi / 2),
+				if ringIndex == 2 then cyan else METAL_LIGHT,
+				if ringIndex == 2 then Enum.Material.Neon else Enum.Material.Metal,
+				reactor
+			)
+			segmentPart.Transparency = if ringIndex == 2 then 0.2 else 0
+		end
+	end
+
+	for side = -1, 1, 2 do
+		for z = -1, 1, 2 do
+			local brace = visualPart(
+				"ReactorBrace",
+				Vector3.new(4, 68, 4),
+				CFrame.new(side * 35, 58, z * 18) * CFrame.Angles(0, 0, math.rad(side * 19)),
+				METAL,
+				Enum.Material.Metal,
+				reactor
+			)
+			brace.Reflectance = 0.16
+		end
+	end
+
+	local beam = visualPart(
+		"ReactorSkyBeam",
+		Vector3.new(3.5, 165, 3.5),
+		CFrame.new(0, 165, 0),
+		cyan,
+		Enum.Material.Neon,
+		reactor
+	)
+	beam.Transparency = 0.58
+	beam.CastShadow = false
+
+	local marker = Instance.new("BillboardGui")
+	marker.Name = "ReactorIdentity"
+	marker.Size = UDim2.fromOffset(300, 42)
+	marker.StudsOffset = Vector3.new(0, 58, 0)
+	marker.AlwaysOnTop = false
+	marker.MaxDistance = 950
+	marker.Parent = core
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundColor3 = Color3.fromRGB(5, 12, 20)
+	label.BackgroundTransparency = 0.32
+	label.BorderSizePixel = 0
+	label.Font = Enum.Font.GothamBlack
+	label.Text = "TITAN REACTOR // CORE BOWL"
+	label.TextColor3 = cyan
+	label.TextSize = 15
+	label.TextStrokeTransparency = 0.45
+	label.Parent = marker
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = label
+end
+
+local function addIceCave(name: string, position: Vector3, mirror: number)
+	local cave = Instance.new("Folder")
+	cave.Name = name
+	cave.Parent = art
+	local caveRock = ROCK:Lerp(Color3.fromRGB(84, 112, 132), 0.28)
+
+	for side = -1, 1, 2 do
+		for layer = 0, 2 do
+			smoothEllipsoid(
+				"CaveWall",
+				Vector3.new(82 - layer * 9, 52 + layer * 9, 34 + layer * 4),
+				CFrame.new(position + Vector3.new(layer * mirror * 8, 20 + layer * 12, side * (61 - layer * 7)))
+					* CFrame.Angles(0, random:NextNumber(-0.15, 0.15), math.rad(side * (8 + layer * 4))),
+				caveRock,
+				if layer == 1 then Enum.Material.Glacier else Enum.Material.Slate,
+				cave
+			)
+		end
+	end
+	for layer = -2, 2 do
+		smoothEllipsoid(
+			"CaveRoof",
+			Vector3.new(44, 25, 58),
+			CFrame.new(position + Vector3.new(layer * 20, 63 + math.abs(layer) * 3, 0))
+				* CFrame.Angles(0, 0, math.rad(layer * 4)),
+			caveRock:Lerp(ICE, 0.12),
+			Enum.Material.Glacier,
+			cave
+		)
+	end
+	for spike = -4, 4 do
+		local icicle = visualPart(
+			"IceFang",
+			Vector3.new(4 + math.abs(spike % 2) * 2, 15 + math.abs(spike) * 1.4, 5),
+			CFrame.new(position + Vector3.new(spike * 9, 46 - math.abs(spike) * 1.5, random:NextNumber(-28, 28)))
+				* CFrame.Angles(0, math.rad(90), math.rad(180)),
+			ICE,
+			Enum.Material.Glacier,
+			cave,
+			Enum.MeshType.Wedge
+		)
+		icicle.Transparency = 0.08
+	end
+	for side = -1, 1, 2 do
+		local caveLight = visualPart(
+			"CaveEnergy",
+			Vector3.new(18, 0.7, 0.7),
+			CFrame.new(position + Vector3.new(0, 13, side * 42)),
+			Color3.fromRGB(110, 225, 255),
+			Enum.Material.Neon,
+			cave
+		)
+		caveLight.CastShadow = false
+		local light = Instance.new("PointLight")
+		light.Color = caveLight.Color
+		light.Brightness = 1.4
+		light.Range = 26
+		light.Parent = caveLight
+	end
+end
+
+addTitanReactor()
+addIceCave("WestGlacierVault", Vector3.new(-255, 2, -250), -1)
+addIceCave("EastGlacierVault", Vector3.new(255, 2, 250), 1)
+
 local function addBaseShell(teamName: string, sign: number, color: Color3)
 	local folder = Instance.new("Folder")
 	folder.Name = teamName .. "ArchitecturalShell"
@@ -267,6 +420,41 @@ local function addBaseShell(teamName: string, sign: number, color: Color3)
 		)
 		panel.Transparency = 0.34
 		panel.Reflectance = 0.12
+	end
+
+	-- Layered interior kit: portal frames, ceiling strips and recessed floor.
+	for portalIndex, z in { -42, 0, 42 } do
+		for side = -1, 1, 2 do
+			visualPart(
+				"InteriorPortal",
+				Vector3.new(2.2, 16, 2.2),
+				CFrame.new(baseX + facing * (4 + side * 22), 34, z),
+				METAL_LIGHT,
+				Enum.Material.Metal,
+				folder
+			)
+		end
+		local ceiling = visualPart(
+			"InteriorCeilingLight" .. portalIndex,
+			Vector3.new(34, 0.5, 1.1),
+			CFrame.new(baseX - facing * 3, 45.8, z),
+			color:Lerp(Color3.new(1, 1, 1), 0.24),
+			Enum.Material.Neon,
+			folder
+		)
+		ceiling.CastShadow = false
+	end
+	for lane = -1, 1, 2 do
+		local floorLine = visualPart(
+			"InteriorFloorGuide",
+			Vector3.new(58, 0.18, 0.7),
+			CFrame.new(baseX, 24.15, lane * 22),
+			color,
+			Enum.Material.Neon,
+			folder
+		)
+		floorLine.Transparency = 0.12
+		floorLine.CastShadow = false
 	end
 end
 

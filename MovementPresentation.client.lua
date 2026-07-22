@@ -7,6 +7,40 @@ local SoundService = game:GetService("SoundService")
 
 local player = Players.LocalPlayer
 
+-- High-speed presentation is deliberately screen-space only. It makes routes
+-- above skiing speed readable without adding camera shake to precision aim.
+local speedGui = Instance.new("ScreenGui")
+speedGui.Name = "TitanKineticFeedback"
+speedGui.ResetOnSpawn = false
+speedGui.IgnoreGuiInset = true
+speedGui.DisplayOrder = 4
+speedGui.Parent = player:WaitForChild("PlayerGui")
+
+local speedLayer = Instance.new("CanvasGroup")
+speedLayer.Name = "SpeedStreaks"
+speedLayer.Size = UDim2.fromScale(1, 1)
+speedLayer.BackgroundTransparency = 1
+speedLayer.GroupTransparency = 1
+speedLayer.Parent = speedGui
+
+local speedStreaks: { Frame } = {}
+for index = 1, 18 do
+	local angle = (index / 18) * math.pi * 2 + (index % 3) * 0.07
+	local streak = Instance.new("Frame")
+	streak.Name = "Streak" .. index
+	streak.AnchorPoint = Vector2.new(0.5, 0.5)
+	streak.BorderSizePixel = 0
+	streak.BackgroundColor3 = if index % 4 == 0
+		then Color3.fromRGB(255, 196, 92)
+		else Color3.fromRGB(108, 220, 255)
+	streak.BackgroundTransparency = 0.22
+	streak.Rotation = math.deg(angle) + 90
+	streak:SetAttribute("Angle", angle)
+	streak:SetAttribute("Phase", (index * 0.137) % 1)
+	streak.Parent = speedLayer
+	table.insert(speedStreaks, streak)
+end
+
 local activeCharacter: Model? = nil
 local jetEmitters: { ParticleEmitter } = {}
 local skiEmitters: { ParticleEmitter } = {}
@@ -117,7 +151,7 @@ if player.Character then
 	task.spawn(install, player.Character)
 end
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
 	local character = activeCharacter
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
@@ -137,6 +171,21 @@ RunService.RenderStepped:Connect(function()
 	for _, emitter in skiEmitters do
 		emitter.Enabled = skiing and horizontalSpeed > 18
 		emitter.Rate = math.clamp((horizontalSpeed - 12) * 0.48, 0, 62)
+	end
+
+	local speedAlpha = math.clamp((horizontalSpeed - 72) / 115, 0, 1)
+	speedLayer.GroupTransparency += ((1 - speedAlpha * 0.72) - speedLayer.GroupTransparency)
+		* math.clamp(dt * 6, 0, 1)
+	for index, streak in speedStreaks do
+		local phase = ((streak:GetAttribute("Phase") :: number) + dt * (0.34 + speedAlpha * 0.82)) % 1
+		streak:SetAttribute("Phase", phase)
+		local angle = streak:GetAttribute("Angle") :: number
+		local radius = 0.12 + phase * 0.62
+		local x = 0.5 + math.cos(angle) * radius
+		local y = 0.5 + math.sin(angle) * radius * 0.78
+		streak.Position = UDim2.fromScale(x, y)
+		streak.Size = UDim2.fromOffset(1 + speedAlpha * 2, 10 + phase * (44 + speedAlpha * 55))
+		streak.BackgroundTransparency = math.clamp(0.22 + phase * 0.5 + (index % 3) * 0.06, 0, 0.92)
 	end
 
 	if grounded and not lastGrounded and lastVerticalSpeed < -25 then

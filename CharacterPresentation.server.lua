@@ -171,6 +171,8 @@ local function buildPresentation(player: Player, character: Model)
 	local rightArm = findBodyPart(character, { "RightUpperArm", "Right Arm" })
 	local leftLowerArm = findBodyPart(character, { "LeftLowerArm", "Left Arm" })
 	local rightLowerArm = findBodyPart(character, { "RightLowerArm", "Right Arm" })
+	local leftUpperLeg = findBodyPart(character, { "LeftUpperLeg", "Left Leg" })
+	local rightUpperLeg = findBodyPart(character, { "RightUpperLeg", "Right Leg" })
 	local leftLeg = findBodyPart(character, { "LeftLowerLeg", "Left Leg" })
 	local rightLeg = findBodyPart(character, { "RightLowerLeg", "Right Leg" })
 	local rightHand = findBodyPart(character, { "RightHand", "Right Arm" })
@@ -191,14 +193,20 @@ local function buildPresentation(player: Player, character: Model)
 	for _, entry in { { -1, leftArm }, { 1, rightArm } } do
 		local side, arm = entry[1], entry[2]
 		addPiece(model, arm, if side < 0 then "LeftPauldron" else "RightPauldron", Vector3.new(0.78, 0.64, 0.82) * scale, CFrame.new(0, 0.32, 0), accent, Enum.Material.Metal, Enum.PartType.Ball)
+		addRoundedPiece(model, arm, if side < 0 then "LeftBicep" else "RightBicep", Vector3.new(0.66, 1.02, 0.66) * scale, CFrame.new(0, -0.15, 0), graphite:Lerp(accent, 0.12), Enum.Material.Metal)
 	end
 	for _, entry in { { -1, leftLowerArm }, { 1, rightLowerArm } } do
 		local side, arm = entry[1], entry[2]
 		addRoundedPiece(model, arm, if side < 0 then "LeftGauntlet" else "RightGauntlet", Vector3.new(0.66, 0.84, 0.62) * scale, CFrame.new(), graphite, Enum.Material.Metal)
 	end
+	for _, entry in { { -1, leftUpperLeg }, { 1, rightUpperLeg } } do
+		local side, leg = entry[1], entry[2]
+		addRoundedPiece(model, leg, if side < 0 then "LeftThigh" else "RightThigh", Vector3.new(0.82, 1.18, 0.74) * scale, CFrame.new(), steel:Lerp(accent, 0.16), Enum.Material.Metal)
+	end
 	for _, entry in { { -1, leftLeg }, { 1, rightLeg } } do
 		local side, leg = entry[1], entry[2]
 		addRoundedPiece(model, leg, if side < 0 then "LeftShin" else "RightShin", Vector3.new(0.70, 1.08, 0.48) * scale, CFrame.new(0, 0, -0.30 * scale), graphite:Lerp(accent, 0.28), Enum.Material.Metal)
+		addRoundedPiece(model, leg, if side < 0 then "LeftBoot" else "RightBoot", Vector3.new(0.78, 0.62, 1.02) * scale, CFrame.new(0, -0.48, -0.18), graphite, Enum.Material.Metal)
 	end
 
 	for side = -1, 1, 2 do
@@ -243,6 +251,22 @@ local function buildPresentation(player: Player, character: Model)
 		local weaponBody = addRoundedPiece(model, rightHand, "WorldWeapon", if automatic then Vector3.new(0.64, 0.68, 2.45) else Vector3.new(0.82, 0.76, 2.15), CFrame.new(0, -0.10, -0.92), graphite, Enum.Material.Metal)
 		if weaponBody then weaponBody:SetAttribute("WeaponName", weaponName) end
 		addPiece(model, rightHand, "WorldWeaponAccent", Vector3.new(0.16, 0.22, 1.35), CFrame.new(0.34, 0.10, -0.98), weaponColor, Enum.Material.Neon)
+	end
+
+	-- The original avatar remains the physics skeleton, but no longer defines
+	-- the silhouette. This removes the blocky Roblox body while preserving all
+	-- humanoid replication, hit detection and attachments.
+	for _, child in character:GetChildren() do
+		if child:IsA("BasePart") then
+			child.Transparency = 1
+			child.CastShadow = false
+		elseif child:IsA("Accessory") then
+			local handle = child:FindFirstChild("Handle")
+			if handle and handle:IsA("BasePart") then
+				handle.Transparency = 1
+				handle.CastShadow = false
+			end
+		end
 	end
 end
 

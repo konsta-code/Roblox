@@ -85,6 +85,7 @@
         "WeaponViewmodel": { "$path": "WeaponViewmodel.client.lua" },
         "WeaponPresentation": { "$path": "WeaponPresentation.client.lua" },
         "MovementPresentation": { "$path": "MovementPresentation.client.lua" },
+        "WeatherPresentation": { "$path": "WeatherPresentation.client.lua" },
         "CharacterPresentation": { "$path": "CharacterPresentation.client.lua" },
         "GameGuide": { "$path": "GameGuide.client.lua" },
         "Ability": { "$path": "Ability.client.lua" },
