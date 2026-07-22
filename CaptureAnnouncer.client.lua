@@ -40,14 +40,14 @@ local function playObjectiveTone(pitch: number)
 end
 
 local banner = Instance.new("TextLabel")
-banner.Size = UDim2.fromOffset(640, 54)
+banner.Size = UDim2.fromOffset(520, 46)
 banner.AnchorPoint = Vector2.new(0.5, 0)
-banner.Position = UDim2.new(0.5, 0, 0, 244)
+banner.Position = UDim2.new(0.5, 0, 0, 202)
 banner.BackgroundColor3 = Color3.fromRGB(10, 13, 19)
 banner.BackgroundTransparency = 1
 banner.BorderSizePixel = 0
 banner.Font = Enum.Font.GothamBlack
-banner.TextSize = 26
+banner.TextSize = 22
 banner.TextTransparency = 1
 banner.TextStrokeColor3 = Color3.fromRGB(8, 10, 14)
 banner.TextStrokeTransparency = 1
@@ -82,8 +82,8 @@ local function announce(text: string, color: Color3)
 	}):Play()
 
 	hideThread = task.spawn(function()
-		task.wait(2.8)
-		local fade = TweenService:Create(banner, TweenInfo.new(0.6), {
+		task.wait(2)
+		local fade = TweenService:Create(banner, TweenInfo.new(0.4), {
 			BackgroundTransparency = 1,
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,

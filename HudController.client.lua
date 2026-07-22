@@ -148,6 +148,8 @@ cooldownLabel.TextColor3 = Color3.fromRGB(150, 245, 205)
 cooldownLabel.TextSize = 9
 cooldownLabel.Parent = cooldownFrame
 
+local jetpackTargetRatio = 1
+
 local speedFrame = Instance.new("Frame")
 speedFrame.Name = "SpeedReadout"
 speedFrame.Size = UDim2.fromOffset(150, 34)
@@ -171,7 +173,11 @@ speedLabel.TextColor3 = Color3.fromRGB(145, 225, 255)
 speedLabel.TextSize = 15
 speedLabel.Parent = speedFrame
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
+	jetpackFill.Size = jetpackFill.Size:Lerp(
+		UDim2.new(jetpackTargetRatio, 0, 1, 0),
+		math.clamp(dt * 12, 0, 1)
+	)
 	local selected = WeaponState.Get()
 	local startedAt, duration = WeaponFeedback.GetCooldown(selected)
 	local elapsed = os.clock() - startedAt
@@ -464,9 +470,9 @@ end)
 
 local medalFrame = Instance.new("CanvasGroup")
 medalFrame.Name = "CombatMedal"
-medalFrame.Size = UDim2.fromOffset(360, 70)
+medalFrame.Size = UDim2.fromOffset(300, 58)
 medalFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-medalFrame.Position = UDim2.fromScale(0.5, 0.64)
+medalFrame.Position = UDim2.fromScale(0.5, 0.66)
 medalFrame.BackgroundColor3 = Color3.fromRGB(8, 14, 22)
 medalFrame.BackgroundTransparency = 0.12
 medalFrame.BorderSizePixel = 0
@@ -485,20 +491,20 @@ local medalScale = Instance.new("UIScale")
 medalScale.Parent = medalFrame
 
 local medalTitle = Instance.new("TextLabel")
-medalTitle.Size = UDim2.new(1, -20, 0, 42)
-medalTitle.Position = UDim2.fromOffset(10, 4)
+medalTitle.Size = UDim2.new(1, -20, 0, 34)
+medalTitle.Position = UDim2.fromOffset(10, 3)
 medalTitle.BackgroundTransparency = 1
 medalTitle.Font = Enum.Font.GothamBlack
 medalTitle.Text = "BLUE PLATE SPECIAL"
 medalTitle.TextColor3 = Color3.fromRGB(127, 231, 255)
-medalTitle.TextSize = 21
+medalTitle.TextSize = 19
 medalTitle.TextStrokeColor3 = Color3.fromRGB(3, 7, 12)
 medalTitle.TextStrokeTransparency = 0.3
 medalTitle.Parent = medalFrame
 
 local medalSubtitle = Instance.new("TextLabel")
-medalSubtitle.Size = UDim2.new(1, -20, 0, 20)
-medalSubtitle.Position = UDim2.fromOffset(10, 43)
+medalSubtitle.Size = UDim2.new(1, -20, 0, 16)
+medalSubtitle.Position = UDim2.fromOffset(10, 36)
 medalSubtitle.BackgroundTransparency = 1
 medalSubtitle.Font = Enum.Font.GothamBold
 medalSubtitle.Text = "COMBAT AWARD"
@@ -530,7 +536,7 @@ local function showCombatMedal(award: string)
 	sound:Play()
 	Debris:AddItem(sound, 2)
 
-	task.delay(2.1, function()
+	task.delay(1.45, function()
 		if sequence == medalSequence then
 			TweenService:Create(medalFrame, TweenInfo.new(0.45), { GroupTransparency = 1 }):Play()
 		end
@@ -700,8 +706,7 @@ syncMatchState()
 
 PlayerHudState.JetpackEnergyChanged:Connect(function(energy: number)
 	local maxEnergy = player:GetAttribute("MaxEnergy")
-	local ratio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
-	TweenService:Create(jetpackFill, TweenInfo.new(0.15), { Size = UDim2.new(ratio, 0, 1, 0) }):Play()
+	jetpackTargetRatio = math.clamp(energy / (typeof(maxEnergy) == "number" and maxEnergy or 100), 0, 1)
 end)
 
 local function bindHealth(character: Model)

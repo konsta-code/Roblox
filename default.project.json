@@ -40,6 +40,7 @@
       "InventoryStation": { "$className": "RemoteEvent" },
       "CombatFeed": { "$className": "RemoteEvent" },
       "DamageFeedback": { "$className": "RemoteEvent" },
+      "TeamPing": { "$className": "RemoteEvent" },
       "CTFScoreUpdate": { "$className": "RemoteEvent" },
       "FlagCarryStatus": { "$className": "RemoteEvent" },
       "MatchStateChanged": { "$className": "RemoteEvent" }

@@ -37,10 +37,10 @@ local function attachMarker(flag: Instance)
 
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "FlagMarker"
-	gui.Size = UDim2.fromOffset(245, 46)
+	gui.Size = UDim2.fromOffset(210, 38)
 	gui.StudsOffset = Vector3.new(0, 9, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 1800
+	gui.MaxDistance = 1000
 	gui.ResetOnSpawn = false
 
 	local label = Instance.new("TextLabel")
@@ -49,7 +49,7 @@ local function attachMarker(flag: Instance)
 	label.BackgroundTransparency = 0.42
 	label.BorderSizePixel = 0
 	label.Font = Enum.Font.GothamBlack
-	label.TextSize = 16
+	label.TextSize = 14
 	label.TextColor3 = flag.Color
 	label.TextStrokeColor3 = Color3.fromRGB(8, 10, 14)
 	label.TextStrokeTransparency = 0.25
@@ -168,7 +168,7 @@ radarGui.Parent = player:WaitForChild("PlayerGui")
 
 local radar = Instance.new("Frame")
 radar.Name = "Radar"
-radar.Size = UDim2.fromOffset(250, 174)
+radar.Size = UDim2.fromOffset(220, 154)
 radar.AnchorPoint = Vector2.new(1, 1)
 radar.Position = UDim2.new(1, -20, 1, -82)
 radar.BackgroundColor3 = Color3.fromRGB(6, 11, 17)
@@ -212,7 +212,7 @@ for index, zScale in { 0.12, 0.26, 0.5, 0.74, 0.88 } do
 	local lane = Instance.new("Frame")
 	lane.Name = "Lane" .. index
 	lane.Size = UDim2.new(1, -12, 0, index == 3 and 2 or 1)
-	lane.Position = UDim2.new(0, 6, 0, math.floor((174 - 33) * zScale))
+	lane.Position = UDim2.new(0, 6, 0, math.floor((154 - 33) * zScale))
 	lane.BackgroundColor3 = if index == 3 then Color3.fromRGB(76, 154, 190) else Color3.fromRGB(67, 92, 116)
 	lane.BackgroundTransparency = if index == 3 then 0.35 else 0.62
 	lane.BorderSizePixel = 0
@@ -479,10 +479,10 @@ teamPingEvent.OnClientEvent:Connect(function(
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "PingMarker"
-	billboard.Size = UDim2.fromOffset(260, 48)
+	billboard.Size = UDim2.fromOffset(220, 40)
 	billboard.StudsOffsetWorldSpace = Vector3.new(0, 5, 0)
 	billboard.AlwaysOnTop = true
-	billboard.MaxDistance = 1600
+	billboard.MaxDistance = 1000
 	billboard.Parent = worldPart
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
@@ -604,10 +604,10 @@ local function attachAllyMarker(target: Player, character: Model)
 
 		local gui = Instance.new("BillboardGui")
 		gui.Name = "TeamIFF"
-		gui.Size = UDim2.fromOffset(270, 38)
+		gui.Size = UDim2.fromOffset(220, 32)
 		gui.StudsOffsetWorldSpace = Vector3.new(0, 4.7, 0)
 		gui.AlwaysOnTop = true
-		gui.MaxDistance = 1300
+		gui.MaxDistance = 800
 		gui.ResetOnSpawn = false
 		gui.Enabled = false
 		gui.Parent = root

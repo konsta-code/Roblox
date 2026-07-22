@@ -25,6 +25,7 @@ local PERSISTENCE_ENABLED = not RunService:IsStudio()
 
 local store = DataStoreService:GetDataStore(STORE_NAME)
 local loaded: { [Player]: boolean } = {}
+local shuttingDown = false
 
 local function keyFor(player: Player): string
 	return "p_" .. player.UserId
@@ -137,6 +138,7 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	if shuttingDown then return end
 	savePlayer(player)
 	loaded[player] = nil
 end)
@@ -158,10 +160,19 @@ game:BindToClose(function()
 	if RunService:IsStudio() then
 		return
 	end
+	shuttingDown = true
+	local remaining = 0
 	for _, player in Players:GetPlayers() do
-		task.spawn(savePlayer, player)
+		remaining += 1
+		task.spawn(function()
+			savePlayer(player)
+			remaining -= 1
+		end)
 	end
-	task.wait(2)
+	local deadline = os.clock() + 20
+	while remaining > 0 and os.clock() < deadline do
+		task.wait(0.1)
+	end
 end)
 
 print(if PERSISTENCE_ENABLED
