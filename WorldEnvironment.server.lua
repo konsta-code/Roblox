@@ -3,19 +3,19 @@
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
 
-Lighting.ClockTime = 15.25
-Lighting.Brightness = 2.65
-Lighting.Ambient = Color3.fromRGB(69, 82, 104)
-Lighting.OutdoorAmbient = Color3.fromRGB(128, 143, 166)
-Lighting.ColorShift_Top = Color3.fromRGB(18, 24, 35)
-Lighting.EnvironmentDiffuseScale = 0.62
-Lighting.EnvironmentSpecularScale = 0.92
-Lighting.ExposureCompensation = 0.16
+Lighting.ClockTime = 13.8
+Lighting.Brightness = 2.35
+Lighting.Ambient = Color3.fromRGB(82, 95, 116)
+Lighting.OutdoorAmbient = Color3.fromRGB(142, 157, 178)
+Lighting.ColorShift_Top = Color3.fromRGB(13, 21, 34)
+Lighting.EnvironmentDiffuseScale = 0.72
+Lighting.EnvironmentSpecularScale = 0.78
+Lighting.ExposureCompensation = 0.08
 Lighting.GlobalShadows = true
-Lighting.ShadowSoftness = 0.28
-Lighting.FogColor = Color3.fromRGB(151, 174, 197)
-Lighting.FogStart = 520
-Lighting.FogEnd = 1680
+Lighting.ShadowSoftness = 0.42
+Lighting.FogColor = Color3.fromRGB(181, 201, 218)
+Lighting.FogStart = 620
+Lighting.FogEnd = 1900
 Lighting.GeographicLatitude = 38
 
 for _, name in { "TribesAtmosphere", "TribesBloom", "TribesGrade", "TribesSunRays", "TribesDepth" } do
@@ -27,12 +27,12 @@ end
 
 local atmosphere = Instance.new("Atmosphere")
 atmosphere.Name = "TribesAtmosphere"
-atmosphere.Density = 0.22
-atmosphere.Offset = 0.08
-atmosphere.Color = Color3.fromRGB(186, 207, 226)
-atmosphere.Decay = Color3.fromRGB(80, 101, 130)
-atmosphere.Glare = 0.16
-atmosphere.Haze = 1.38
+atmosphere.Density = 0.19
+atmosphere.Offset = 0.12
+atmosphere.Color = Color3.fromRGB(206, 222, 235)
+atmosphere.Decay = Color3.fromRGB(92, 116, 145)
+atmosphere.Glare = 0.12
+atmosphere.Haze = 1.05
 atmosphere.Parent = Lighting
 
 local bloom = Instance.new("BloomEffect")
@@ -45,9 +45,9 @@ bloom.Parent = Lighting
 local grade = Instance.new("ColorCorrectionEffect")
 grade.Name = "TribesGrade"
 grade.Brightness = 0.015
-grade.Contrast = 0.15
-grade.Saturation = -0.025
-grade.TintColor = Color3.fromRGB(225, 236, 248)
+grade.Contrast = 0.11
+grade.Saturation = -0.08
+grade.TintColor = Color3.fromRGB(232, 240, 248)
 grade.Parent = Lighting
 
 local sunRays = Instance.new("SunRaysEffect")

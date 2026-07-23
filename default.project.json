@@ -75,6 +75,7 @@
       "ImportedAssetOrganizer": { "$path": "ImportedAssetOrganizer.server.lua" },
       "BotManager": { "$path": "BotManager.server.lua" },
       "MapBuilder": { "$path": "MapBuilder.server.lua" },
+      "NaturalTerrain": { "$path": "NaturalTerrain.server.lua" },
       "ImportedMapLoader": { "$path": "ImportedMapLoader.server.lua" },
       "MapArt": { "$path": "MapArt.server.lua" }
     },
