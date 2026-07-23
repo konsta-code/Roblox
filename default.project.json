@@ -89,6 +89,7 @@
         "FlagMarkers": { "$path": "FlagMarkers.client.lua" },
         "CaptureAnnouncer": { "$path": "CaptureAnnouncer.client.lua" },
         "DeathScreen": { "$path": "DeathScreen.client.lua" },
+        "DeathActionGuard": { "$path": "DeathActionGuard.client.lua" },
         "BaseStatus": { "$path": "BaseStatus.client.lua" },
         "LoadoutMenu": { "$path": "LoadoutMenu.client.lua" },
         "WeaponSelector": { "$path": "WeaponSelector.client.lua" },

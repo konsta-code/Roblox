@@ -22,6 +22,7 @@ local SELECT_COOLDOWN = 0.1
 local lastSelect = -math.huge
 
 local function isAlive(): boolean
+	if player:GetAttribute("LocalCombatDead") == true then return false end
 	if player:GetAttribute("CombatAlive") == false then return false end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -134,6 +135,8 @@ end)
 
 local function bindCharacter(character: Model)
 	WeaponState.SetPrimaryDown(false)
+	WeaponState.Set("Spinfusor")
+	selectEvent:FireServer("Spinfusor")
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	humanoid.Died:Connect(function()
 		WeaponState.SetPrimaryDown(false)

@@ -14,6 +14,7 @@ local lastFireTime = 0
 
 local function firePrimary(down: boolean)
 	if not down then return end
+	if player:GetAttribute("LocalCombatDead") == true then return end
 	if player:GetAttribute("LoadoutMenuOpen") then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
 	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end

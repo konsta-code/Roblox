@@ -750,7 +750,10 @@ RunService:BindToRenderStep("WeaponViewmodel", Enum.RenderPriority.Camera.Value 
 	end
 	local currentCharacter = player.Character
 	local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
-	if player:GetAttribute("CombatAlive") == false or not currentHumanoid or currentHumanoid.Health <= 0 then
+	if player:GetAttribute("LocalCombatDead") == true
+		or player:GetAttribute("CombatAlive") == false
+		or not currentHumanoid
+		or currentHumanoid.Health <= 0 then
 		setVisible(spinfusor, false, false)
 		setVisible(chaingun, false, false)
 		return

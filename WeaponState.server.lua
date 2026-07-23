@@ -22,6 +22,24 @@ local function setDefault(player: Player)
 	player:SetAttribute("EquippedWeapon", "Spinfusor")
 end
 
+local function bindCharacter(player: Player, character: Model)
+	setDefault(player)
+	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	humanoid.Died:Connect(function()
+		if player.Character == character then
+			player:SetAttribute("EquippedWeapon", "Locked")
+		end
+	end)
+end
+
+local function setupPlayer(player: Player)
+	setDefault(player)
+	player.CharacterAdded:Connect(function(character)
+		bindCharacter(player, character)
+	end)
+	if player.Character then bindCharacter(player, player.Character) end
+end
+
 selectEvent.OnServerEvent:Connect(function(player: Player, weapon: any)
 	if typeof(weapon) ~= "string" or not VALID_WEAPONS[weapon] then
 		return -- ungültige/erfundene Daten ignorieren
@@ -37,9 +55,9 @@ selectEvent.OnServerEvent:Connect(function(player: Player, weapon: any)
 	player:SetAttribute("EquippedWeapon", weapon)
 end)
 
-Players.PlayerAdded:Connect(setDefault)
+Players.PlayerAdded:Connect(setupPlayer)
 for _, player in Players:GetPlayers() do
-	setDefault(player)
+	setupPlayer(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)

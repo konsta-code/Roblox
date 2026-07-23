@@ -32,6 +32,7 @@ local localOverheatUntil = 0
 local lastImpactSound = 0
 
 local function isAlive(): boolean
+	if player:GetAttribute("LocalCombatDead") == true then return false end
 	if player:GetAttribute("CombatAlive") == false then return false end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
