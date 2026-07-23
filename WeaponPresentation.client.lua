@@ -15,6 +15,13 @@ local WeaponState = require(ReplicatedStorage.Modules.WeaponState)
 local player = Players.LocalPlayer
 local zoomHeld = false
 
+local function isAlive(): boolean
+	if player:GetAttribute("CombatAlive") == false then return false end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
+end
+
 local scopeGui = Instance.new("ScreenGui")
 scopeGui.Name = "WeaponScope"
 scopeGui.ResetOnSpawn = false
@@ -84,6 +91,7 @@ local function refreshZoom()
 	local canZoom = WeaponState.Get() == "Chaingun"
 		and profile.zoomFov ~= nil
 		and not player:GetAttribute("LoadoutMenuOpen")
+		and isAlive()
 	local active = zoomHeld and canZoom
 	scopeGui.Enabled = active
 	player:SetAttribute("WeaponZoomFov", active and profile.zoomFov or nil)
@@ -111,6 +119,18 @@ end)
 WeaponState.Changed:Connect(refreshZoom)
 player:GetAttributeChangedSignal("Loadout"):Connect(refreshZoom)
 player:GetAttributeChangedSignal("LoadoutMenuOpen"):Connect(refreshZoom)
+player:GetAttributeChangedSignal("CombatAlive"):Connect(refreshZoom)
+
+local function bindCharacter(character: Model)
+	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	humanoid.Died:Connect(function()
+		zoomHeld = false
+		refreshZoom()
+	end)
+end
+
+player.CharacterAdded:Connect(bindCharacter)
+if player.Character then bindCharacter(player.Character) end
 
 local function playOneShot(
 	soundId: string,
@@ -216,7 +236,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local speed = if root and root:IsA("BasePart") then root.AssemblyLinearVelocity.Magnitude else 0
-	local menuOpen = player:GetAttribute("LoadoutMenuOpen") == true
+	local menuOpen = player:GetAttribute("LoadoutMenuOpen") == true or not isAlive()
 	local windTarget = if menuOpen then 0 else math.clamp((speed - 25) / 150, 0, 0.42)
 	wind.Volume += (windTarget - wind.Volume) * math.clamp(dt * 5, 0, 1)
 	wind.PlaybackSpeed = 0.45 + math.clamp(speed / 180, 0, 0.8)

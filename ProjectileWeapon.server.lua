@@ -483,6 +483,7 @@ local function spawnProjectile(
 end
 
 fireEvent.OnServerEvent:Connect(function(player: Player, direction: any)
+	if player:GetAttribute("CombatAlive") == false then return end
 	if not isFiniteVector(direction) or direction.Magnitude < 0.5 then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
 	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end

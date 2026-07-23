@@ -31,6 +31,13 @@ local localOverheatUntil = 0
 
 local lastImpactSound = 0
 
+local function isAlive(): boolean
+	if player:GetAttribute("CombatAlive") == false then return false end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
+end
+
 local function showImpact(position: Vector3, normal: Vector3, color: Color3, material: Enum.Material)
 	local anchor = Instance.new("Part")
 	anchor.Name = "BallisticImpact"
@@ -120,6 +127,7 @@ local function drawTracer(origin: Vector3, endPoint: Vector3, color: Color3, wid
 end
 
 local function fireOnce(profile: ClassKitConstants.AutomaticProfile)
+	if not isAlive() then return end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local camera = workspace.CurrentCamera
@@ -150,6 +158,10 @@ local function fireOnce(profile: ClassKitConstants.AutomaticProfile)
 end
 
 local function tryFire(isInitialPress: boolean)
+	if not isAlive() then
+		WeaponState.SetPrimaryDown(false)
+		return
+	end
 	if not WeaponState.IsPrimaryDown() then return end
 	if player:GetAttribute("LoadoutMenuOpen") then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
@@ -186,7 +198,17 @@ local function resetHeat()
 	WeaponState.SetAutomaticHeat(0, 0)
 end
 
-player.CharacterAdded:Connect(resetHeat)
+local function bindCharacter(character: Model)
+	resetHeat()
+	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	humanoid.Died:Connect(function()
+		WeaponState.SetPrimaryDown(false)
+		resetHeat()
+	end)
+end
+
+player.CharacterAdded:Connect(bindCharacter)
+if player.Character then bindCharacter(player.Character) end
 player:GetAttributeChangedSignal("Loadout"):Connect(resetHeat)
 
 RunService.RenderStepped:Connect(function(dt)

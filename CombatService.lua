@@ -91,7 +91,20 @@ end
 
 local function bindCharacter(player: Player, character: Model)
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	player:SetAttribute("CombatAlive", true)
+	humanoid.BreakJointsOnDeath = false
 	humanoid.Died:Connect(function()
+		if player.Character ~= character then return end
+		player:SetAttribute("CombatAlive", false)
+		player:SetAttribute("IsSkiing", false)
+		player:SetAttribute("IsJetpacking", false)
+		humanoid.PlatformStand = false
+		local deathRoot = character:FindFirstChild("HumanoidRootPart")
+		if deathRoot and deathRoot:IsA("BasePart") then
+			deathRoot.AssemblyLinearVelocity = Vector3.zero
+			deathRoot.AssemblyAngularVelocity = Vector3.zero
+			pcall(function() deathRoot:SetNetworkOwner(nil) end)
+		end
 		addCareerAndRound(player, "Deaths", 1)
 		killStreaks[player] = 0
 

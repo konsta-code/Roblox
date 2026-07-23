@@ -137,6 +137,10 @@ scale.Parent = panel
 local function activate(_name: string, inputState: Enum.UserInputState)
 	if inputState ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Sink end
 	if player:GetAttribute("LoadoutMenuOpen") then return Enum.ContextActionResult.Sink end
+	if player:GetAttribute("CombatAlive") == false then return Enum.ContextActionResult.Sink end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return Enum.ContextActionResult.Sink end
 	local now = workspace:GetServerTimeNow()
 	if (player:GetAttribute("AbilityReadyAt") or 0) <= now
 		and (player:GetAttribute("AbilitySilencedUntil") or 0) <= now then

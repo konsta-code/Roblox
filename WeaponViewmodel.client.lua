@@ -748,6 +748,13 @@ RunService:BindToRenderStep("WeaponViewmodel", Enum.RenderPriority.Camera.Value 
 		setVisible(chaingun, false, false)
 		return
 	end
+	local currentCharacter = player.Character
+	local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
+	if player:GetAttribute("CombatAlive") == false or not currentHumanoid or currentHumanoid.Health <= 0 then
+		setVisible(spinfusor, false, false)
+		setVisible(chaingun, false, false)
+		return
+	end
 
 	elapsed += dt
 	recoil *= math.exp(-14 * dt)

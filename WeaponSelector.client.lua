@@ -21,6 +21,13 @@ local player = Players.LocalPlayer
 local SELECT_COOLDOWN = 0.1
 local lastSelect = -math.huge
 
+local function isAlive(): boolean
+	if player:GetAttribute("CombatAlive") == false then return false end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
+end
+
 -- === kleine HUD-Anzeige (unten mittig) ===
 local gui = Instance.new("ScreenGui")
 gui.Name = "WeaponHud"
@@ -54,6 +61,7 @@ local function refresh()
 end
 
 local function selectWeapon(weapon: WeaponState.Weapon)
+	if not isAlive() then return end
 	local now = os.clock()
 	if now - lastSelect < SELECT_COOLDOWN then
 		return
@@ -71,7 +79,7 @@ refresh()
 selectEvent:FireServer("Spinfusor") -- Startwaffe auch dem Server melden
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	if processed or player:GetAttribute("LoadoutMenuOpen") then
+	if processed or player:GetAttribute("LoadoutMenuOpen") or not isAlive() then
 		return
 	end
 	if input.KeyCode == Enum.KeyCode.One then
@@ -88,6 +96,7 @@ local function primaryAction(_actionName: string, inputState: Enum.UserInputStat
 	end
 	if inputState ~= Enum.UserInputState.Begin
 		or player:GetAttribute("LoadoutMenuOpen")
+		or not isAlive()
 		or UserInputService:GetFocusedTextBox() ~= nil then
 		return Enum.ContextActionResult.Pass
 	end
@@ -106,7 +115,7 @@ ContextActionService:SetTitle("PrimaryWeaponFire", "FIRE")
 ContextActionService:SetPosition("PrimaryWeaponFire", UDim2.new(1, -95, 1, -210))
 
 local function swapAction(_actionName: string, inputState: Enum.UserInputState): Enum.ContextActionResult
-	if inputState ~= Enum.UserInputState.Begin or player:GetAttribute("LoadoutMenuOpen") then
+	if inputState ~= Enum.UserInputState.Begin or player:GetAttribute("LoadoutMenuOpen") or not isAlive() then
 		return Enum.ContextActionResult.Pass
 	end
 	selectWeapon(if WeaponState.Get() == "Spinfusor" then "Chaingun" else "Spinfusor")
@@ -123,6 +132,13 @@ player:GetAttributeChangedSignal("LoadoutMenuOpen"):Connect(function()
 	end
 end)
 
-player.CharacterAdded:Connect(function()
+local function bindCharacter(character: Model)
 	WeaponState.SetPrimaryDown(false)
-end)
+	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	humanoid.Died:Connect(function()
+		WeaponState.SetPrimaryDown(false)
+	end)
+end
+
+player.CharacterAdded:Connect(bindCharacter)
+if player.Character then bindCharacter(player.Character) end

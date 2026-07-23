@@ -98,6 +98,9 @@ local function onDied()
 		task.cancel(countdownThread)
 	end
 	gui.Enabled = true
+	local camera = workspace.CurrentCamera
+	if camera then camera.FieldOfView = 70 end
+	player:SetAttribute("WeaponZoomFov", nil)
 	recap.Text = "KAMPFDATEN WERDEN GELADEN ..."
 	task.delay(0.15, function()
 		if gui.Enabled then

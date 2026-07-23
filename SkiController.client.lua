@@ -53,6 +53,15 @@ local Input = {
 	actionJetpackHeld = false,
 }
 
+local function clearMovementInput()
+	Input.moveVector = Vector3.zero
+	Input.skiHeld = false
+	Input.jetpackHeld = false
+	Input.controllerMove = Vector2.zero
+	Input.actionSkiHeld = false
+	Input.actionJetpackHeld = false
+end
+
 local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -108,6 +117,8 @@ local function setupCharacter(newCharacter: Model)
 	character = newCharacter
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	rootPart = character:WaitForChild("HumanoidRootPart") :: BasePart
+	local boundHumanoid = humanoid
+	local boundRoot = rootPart
 
 	humanoid.WalkSpeed = 0
 	humanoid.AutoRotate = false
@@ -144,6 +155,24 @@ local function setupCharacter(newCharacter: Model)
 	player:SetAttribute("IsJetpacking", false)
 	PlayerHudState.SetJetpackEnergy(State.jetpackEnergy)
 
+	boundHumanoid.Died:Connect(function()
+		if humanoid ~= boundHumanoid then return end
+		clearMovementInput()
+		State.velocity = Vector3.zero
+		State.lastAirVelocity = Vector3.zero
+		State.isGrounded = false
+		State.wasGrounded = false
+		State.isSkiing = false
+		State.wasJetpacking = false
+		State.jetpackAlpha = 0
+		player:SetAttribute("IsSkiing", false)
+		player:SetAttribute("IsJetpacking", false)
+		if boundRoot.Parent then
+			boundRoot.AssemblyLinearVelocity = Vector3.zero
+			boundRoot.AssemblyAngularVelocity = Vector3.zero
+		end
+	end)
+
 	print(string.format("[Movement] %s loaded", Constants.BUILD_ID))
 end
 
@@ -151,6 +180,10 @@ setupCharacter(player.Character or player.CharacterAdded:Wait())
 player.CharacterAdded:Connect(setupCharacter)
 
 local function updateMoveVector()
+	if not humanoid or humanoid.Health <= 0 then
+		clearMovementInput()
+		return
+	end
 	if player:GetAttribute("LoadoutMenuOpen") then
 		Input.moveVector = Vector3.zero
 		Input.skiHeld = false
@@ -194,6 +227,10 @@ local function updateMoveVector()
 end
 
 local function updateHoldAction(field: "actionSkiHeld" | "actionJetpackHeld", inputState: Enum.UserInputState)
+	if not humanoid or humanoid.Health <= 0 then
+		clearMovementInput()
+		return Enum.ContextActionResult.Sink
+	end
 	if inputState == Enum.UserInputState.Begin then
 		Input[field] = true
 	elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
@@ -389,6 +426,7 @@ local function updateFacing()
 end
 
 movementImpulse.OnClientEvent:Connect(function(impulse)
+	if not humanoid or humanoid.Health <= 0 then return end
 	if typeof(impulse) ~= "Vector3" then return end
 	if impulse.X ~= impulse.X or impulse.Y ~= impulse.Y or impulse.Z ~= impulse.Z then return end
 	local safeImpulse = clampMagnitude(impulse, Constants.MAX_EXTERNAL_IMPULSE)
@@ -402,6 +440,10 @@ end)
 
 RunService.Heartbeat:Connect(function(dt)
 	if not character or not character.Parent or not rootPart or not rootPart.Parent then return end
+	if not humanoid or humanoid.Health <= 0 then
+		clearMovementInput()
+		return
+	end
 	dt = math.min(dt, 1 / 20)
 
 	updateMoveVector()

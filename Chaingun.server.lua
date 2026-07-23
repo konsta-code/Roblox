@@ -152,6 +152,7 @@ local function tryFire(player: Player, direction: any)
 end
 
 fireEvent.OnServerEvent:Connect(function(player: Player, direction: any, _claimedTarget: any)
+	if player:GetAttribute("CombatAlive") == false then return end
 	local silencedUntil = player:GetAttribute("AbilitySilencedUntil")
 	if typeof(silencedUntil) == "number" and silencedUntil > workspace:GetServerTimeNow() then return end
 	-- Serverautoritative Waffenwahl (WeaponState.server): nur feuern, wenn die
