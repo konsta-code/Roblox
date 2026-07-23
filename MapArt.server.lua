@@ -4,6 +4,10 @@
 
 local Lighting = game:GetService("Lighting")
 
+-- Superseded by TribesWorld.server.lua (the old symmetric alpine dressing does not
+-- fit the large open world). Skip unless switched back.
+if workspace:GetAttribute("UseTribesWorld") ~= false then return end
+
 -- Imported Blender modules win over the native fallback. The loader resolves
 -- this attribute at startup; a short wait removes script start-order races.
 local resolutionDeadline = os.clock() + 3

@@ -78,7 +78,8 @@
       "NaturalTerrain": { "$path": "NaturalTerrain.server.lua" },
       "ImportedMapLoader": { "$path": "ImportedMapLoader.server.lua" },
       "MapArt": { "$path": "MapArt.server.lua" },
-      "TribesSunset": { "$path": "TribesSunset.server.lua" }
+      "TribesSunset": { "$path": "TribesSunset.server.lua" },
+      "TribesWorld": { "$path": "TribesWorld.server.lua" }
     },
     "StarterPlayer": {
       "$properties": {

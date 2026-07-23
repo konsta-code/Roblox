@@ -4,6 +4,10 @@
 
 local Workspace = game:GetService("Workspace")
 
+-- Superseded by TribesWorld.server.lua (large open world). Skip unless explicitly
+-- switched back to the old symmetric terrain.
+if Workspace:GetAttribute("UseTribesWorld") ~= false then return end
+
 local map = Workspace:WaitForChild("TribesMapLive", 20)
 if not map then return end
 
