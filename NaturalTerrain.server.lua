@@ -21,14 +21,18 @@ if not terrain then return end
 
 terrain:Clear()
 terrain.Decoration = true
-terrain.WaterColor = Color3.fromRGB(101, 154, 190)
-terrain.WaterReflectance = 0.2
-terrain.WaterTransparency = 0.32
-terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(238, 244, 248))
-terrain:SetMaterialColor(Enum.Material.Glacier, Color3.fromRGB(150, 191, 218))
-terrain:SetMaterialColor(Enum.Material.Ice, Color3.fromRGB(175, 210, 231))
-terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(67, 76, 86))
-terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(53, 64, 75))
+terrain.WaterColor = Color3.fromRGB(96, 128, 120)
+terrain.WaterReflectance = 0.18
+terrain.WaterTransparency = 0.34
+-- Tribes sunset palette: saturated rolling grass with pale, worn-down spines and
+-- warm grey rock where the hills break through. Sunset lighting warms all of this.
+-- Strongly saturated greens so they survive the warm sunset light instead of
+-- washing out to desert sand.
+terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(82, 152, 40))
+terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(62, 122, 36))
+terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(150, 148, 116))
+terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(102, 104, 92))
+terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(84, 86, 78))
 
 local mainProfile = {
 	{ -535, 24 }, { -450, -4 }, { -345, 25 }, { -235, -12 }, { -120, 38 },
@@ -117,14 +121,22 @@ local function landscapeHeight(x: number, z: number): number
 end
 
 local function surfaceMaterial(x: number, z: number, height: number): Enum.Material
-	local iceNoise = math.noise(x * 0.008, z * 0.01, 133)
-	if height < 5 and math.abs(x) < 500 and math.abs(z) < 350 and iceNoise > -0.05 then
-		return Enum.Material.Glacier
+	-- Pale, wind-worn streaks run down the steep hill spines (the signature
+	-- lighter erosion lines in the Tribes screenshots). Kept rarer so the map
+	-- reads as green grass, not sand.
+	local streak = math.noise(x * 0.006, z * 0.02, 133)
+	if streak > 0.42 and height > 24 then
+		return Enum.Material.Ground
 	end
+	-- Exposed rock only on the far highland rim.
 	if math.abs(z) > 480 and height < 48 then
-		return Enum.Material.Slate
+		return Enum.Material.Rock
 	end
-	return Enum.Material.Snow
+	-- Lusher, darker grass pools in the valley floors.
+	if height < 6 then
+		return Enum.Material.LeafyGrass
+	end
+	return Enum.Material.Grass
 end
 
 local RESOLUTION = 4
@@ -194,11 +206,11 @@ terrainVisuals.Parent = map
 
 local function addRoundedKicker(source: BasePart)
 	local visual = Instance.new("Part")
-	visual.Name = source.Name .. "SnowDrift"
+	visual.Name = source.Name .. "GrassDrift"
 	visual.Size = Vector3.one
 	visual.CFrame = source.CFrame * CFrame.new(0, source.Size.Y * 0.5 - 2.5, 0)
-	visual.Color = Color3.fromRGB(230, 239, 246)
-	visual.Material = Enum.Material.Snow
+	visual.Color = Color3.fromRGB(96, 132, 54)
+	visual.Material = Enum.Material.Grass
 	visual.Anchored = true
 	visual.CanCollide = false
 	visual.CanTouch = false
@@ -261,4 +273,4 @@ if scenery then
 end
 
 Workspace:SetAttribute("NaturalTerrainReady", true)
-print("[NaturalTerrain] continuous alpine snow terrain generated")
+print("[NaturalTerrain] continuous rolling grass terrain generated")
