@@ -78,6 +78,15 @@ Soft-Currency + Robux). Zuerst Core stabil und fun machen, dann Lobby-Layer.
 - **TEMPO (Phase 1, 2026-07-24)**:
   - `MatchConstants`: Warmup 6 s (vorher 10), Overtime 90 s (vorher 120), PostMatch 18 s (vorher 25)
   - `Players.RespawnTime = 3.5` (gesetzt in `SpawnManager.server.lua`)
+- **EXPLOSIONS-WUMMS (2026-07-24)**: Disc-Impact hat jetzt weiss-heissen
+  Kern-Blitz, hellere PointLight, Splitter-Funken, Schockwellen-Ring entlang der
+  Aufprall-Normalen und einen runtergepitchten Sub-Bass-Soundlayer
+  (`showExplosion` in `ProjectileWeapon.server`). Neues RemoteEvent
+  `ExplosionFeedback` wird **dynamisch in `CombatService` erzeugt** (bewusst
+  NICHT in default.project.json -> kein rojo-Neustart noetig);
+  `CombatService.BroadcastExplosion(pos, radius)` -> `CameraShake.client`
+  schuettelt abstandsabhaengig bei JEDER nahen Explosion (auch Granaten).
+  Tuning: `EXPLOSION_TRAUMA` / `EXPLOSION_FALLOFF_MULT` in `CameraShake.client`.
 
 ## Status
 
@@ -96,9 +105,8 @@ getestet** arbeiten, kein Big-Bang.
 ## Nächste offene Schritte
 
 **Sofort (Core-Polish):**
-1. Combat-Feel + Spawn-Fix + Map-Voting + neues Tempo im Play-Modus testen und `MULT`s / Shake justieren.
-2. **Explosions-Wumms**: größerer Blitz/Shockwave + fetterer Sound bei Disc-Impact.
-3. Balance / Bot-KI-Feinschliff (playtest-getrieben).
+1. Combat-Feel + Spawn-Fix + Map-Voting + neues Tempo + Explosions-Wumms im Play-Modus testen und `MULT`s / Shake justieren.
+2. Balance / Bot-KI-Feinschliff (playtest-getrieben).
 
 **Danach (Monetarisierung-Track):**
 4. Lobby-Grundgerüst (separate Place empfohlen) – Spieler treffen, Mode wählen, Queue.
