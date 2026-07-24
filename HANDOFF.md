@@ -78,6 +78,20 @@ Soft-Currency + Robux). Zuerst Core stabil und fun machen, dann Lobby-Layer.
 - **TEMPO (Phase 1, 2026-07-24)**:
   - `MatchConstants`: Warmup 6 s (vorher 10), Overtime 90 s (vorher 120), PostMatch 18 s (vorher 25)
   - `Players.RespawnTime = 3.5` (gesetzt in `SpawnManager.server.lua`)
+- **SKI-AUDIO + POSEN-SYNC (2026-07-24)**: Lokaler Ski-Rutsch-Loop (Hiss+Rumble,
+  speed-gesteuert, still in der Luft), Default-Footsteps beim Skiing gemutet.
+  Neues RemoteEvent `MovementStateSync` (dynamisch in `MovementGuard`): Client
+  meldet Ski/Jet, Server spiegelt als **Character-Attribut** (repliziert) ->
+  Fremd-Charaktere zeigen echte Ski-Posen + raeumlichen `SkiSlideLoop`
+  (`CharacterMotion`). SkiController unangetastet.
+- **LOBBY-PHASE (2026-07-24)**: Journey jetzt Lobby (Klassenwahl+Ready im
+  LoadoutMenu) -> Warmup -> Match -> PostMatch -> Lobby. `MatchManager`-Phase
+  "Lobby": endet ab 60% Ready (`LOBBY_READY_FRACTION`) sofort, sonst nach 45 s
+  (`LOBBY_DURATION`). RemoteEvent `MatchReady` (dynamisch), Ready als Spieler-
+  Attribut `MatchReady`. Klassenwahl greift in Lobby/Warmup SOFORT (LoadoutManager,
+  kampffreie Phasen). HUD-Label vorhanden. Waffen-MVP-Check: Thumper-Bogen
+  (`gravity`), Shotgun (`pellets`), Nitron-Flag-Drop (`causesFlagFumble`) und
+  Homing (`homingStrength`) existieren bereits in `ClassKitConstants`.
 - **EXPLOSIONS-WUMMS (2026-07-24)**: Disc-Impact hat jetzt weiss-heissen
   Kern-Blitz, hellere PointLight, Splitter-Funken, Schockwellen-Ring entlang der
   Aufprall-Normalen und einen runtergepitchten Sub-Bass-Soundlayer
