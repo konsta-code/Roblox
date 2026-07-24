@@ -221,6 +221,21 @@ local function applyExplosion(
 			local damage = getSplashDamage(profile, (targetRoot.Position - position).Magnitude)
 			if damage > 0 and hasExplosionLineOfSight(position, targetCharacter, targetRoot, shooter.Character) then
 				CombatService.Damage(shooter, targetHumanoid, damage, profile.name)
+				-- Splash-Knockback: Gegner von der Explosion wegpunten, skaliert mit
+				-- Naehe (ueber die Schadens-Staerke). Ueber movementImpulse, damit die
+				-- client-autoritative Bewegung es smooth vorhersagt (nicht nur Server).
+				if targetPlayer ~= shooter then
+					local kbOffset = targetRoot.Position - position
+					local kbStrength = damage / profile.splashMaxDamage
+					local kbImpulse = (kbOffset.Magnitude > 0.05 and kbOffset.Unit or Vector3.yAxis)
+						* Constants.ENEMY_KNOCKBACK_SPEED * kbStrength
+						+ Vector3.yAxis * Constants.ENEMY_KNOCKBACK_UP_SPEED * kbStrength
+					if kbImpulse.Magnitude > Constants.MAX_EXTERNAL_IMPULSE then
+						kbImpulse = kbImpulse.Unit * Constants.MAX_EXTERNAL_IMPULSE
+					end
+					targetRoot.AssemblyLinearVelocity += kbImpulse
+					movementImpulse:FireClient(targetPlayer, kbImpulse)
+				end
 			end
 		end
 	end
@@ -265,19 +280,25 @@ local function hitHumanoid(instance: Instance): Humanoid?
 	return model:FindFirstChildOfClass("Humanoid")
 end
 
-local function directHitAward(humanoid: Humanoid, profile: ClassKitConstants.DiscProfile): string?
-	if not string.find(profile.name, "Spinfusor", 1, true) then
-		return nil
-	end
+-- Gegner ist schnell UND in der Luft (kein Boden knapp darunter) -> der
+-- Mid-Air-Skillshot. Basis fuer den Award UND den lethalen Damage-Bonus.
+local function isMidairHit(humanoid: Humanoid): boolean
 	local character = humanoid.Parent
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not character or not root or not root:IsA("BasePart") or root.AssemblyLinearVelocity.Magnitude < 18 then
-		return nil
+		return false
 	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { character }
-	if workspace:Raycast(root.Position, Vector3.new(0, -8, 0), params) then
+	return workspace:Raycast(root.Position, Vector3.new(0, -8, 0), params) == nil
+end
+
+local function directHitAward(humanoid: Humanoid, profile: ClassKitConstants.DiscProfile): string?
+	if not string.find(profile.name, "Spinfusor", 1, true) then
+		return nil
+	end
+	if not isMidairHit(humanoid) then
 		return nil
 	end
 	return "BLUE PLATE SPECIAL"
@@ -557,13 +578,36 @@ RunService.Heartbeat:Connect(function(dt)
 					else directBotTeam == nil or directBotTeam ~= (projectile.shooter.Team and projectile.shooter.Team.Name)
 				if directHumanoid and directHumanoid.Health > 0 and canDamageDirect then
 					local award = directHitAward(directHumanoid, projectile.profile)
+					local directDamage = projectile.profile.directDamage
+					if isMidairHit(directHumanoid) then
+						directDamage *= Constants.MIDAIR_DIRECT_MULT
+					end
 					CombatService.Damage(
 						projectile.shooter,
 						directHumanoid,
-						projectile.profile.directDamage,
+						directDamage,
 						projectile.profile.name,
 						award
 					)
+					-- Direkt-Treffer punten hart entlang der Disc-Flugrichtung -- der
+					-- fette "getroffen und weggeschossen"-Moment. Nur Spieler (Client-
+					-- Prediction); ein toter Gegner ignoriert den Client-Impuls, dann
+					-- gibt der Server-Velocity-Nudge der Leiche trotzdem Schwung.
+					if directPlayer then
+						local directRoot = directCharacter and directCharacter:FindFirstChild("HumanoidRootPart")
+						if directRoot and directRoot:IsA("BasePart") then
+							local travelDir = if projectile.velocity.Magnitude > 0.1
+								then projectile.velocity.Unit
+								else Vector3.yAxis
+							local dImpulse = travelDir * Constants.DIRECT_KNOCKBACK_SPEED
+								+ Vector3.yAxis * Constants.DIRECT_KNOCKBACK_UP_SPEED
+							if dImpulse.Magnitude > Constants.MAX_EXTERNAL_IMPULSE then
+								dImpulse = dImpulse.Unit * Constants.MAX_EXTERNAL_IMPULSE
+							end
+							directRoot.AssemblyLinearVelocity += dImpulse
+							movementImpulse:FireClient(directPlayer, dImpulse)
+						end
+					end
 				else
 					directHumanoid = nil
 					hitBase = BaseService.DamageHit(projectile.shooter, result.Instance, projectile.profile.directDamage)

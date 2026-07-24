@@ -227,7 +227,42 @@ end
 -- ============================================================
 local pick = Workspace:GetAttribute("SelectedMapId") or Workspace:GetAttribute("ForceMapId")
 local startDef = (typeof(pick) == "string" and MapPool.get(pick)) or MapPool.get(DEFAULT_MAP)
+
+-- Anfangs-Spawn-Rettung: Robloxens Auto-Spawn setzt den Spieler sofort an die
+-- ALTE Basisposition (bevor MapDirector die Basis auf ihr Plateau seatet). Wird
+-- dort das Terrain drueber generiert, steckt man "unter der Map". Deshalb: jeden
+-- frisch gespawnten Charakter WAEHREND des Bauens sofort nach oben heben (Gravity
+-- ist 0 -> er schwebt sicher), danach an den echten, gesetzten Team-Spawn setzen.
+-- Faesst das Charakter-Laden NICHT an (nur Position) -> Modell/Jetpack bleiben ok.
+local building = true
+local buildingConns: { RBXScriptConnection } = {}
+local function liftUp(character: Model)
+	local root = character:WaitForChild("HumanoidRootPart", 5)
+	if building and root and root:IsA("BasePart") then
+		root.AssemblyLinearVelocity = Vector3.zero
+		character:PivotTo(root.CFrame + Vector3.new(0, 300, 0))
+	end
+end
+local function watchPlayer(watched: Player)
+	table.insert(buildingConns, watched.CharacterAdded:Connect(liftUp))
+	if watched.Character then
+		task.spawn(liftUp, watched.Character)
+	end
+end
+for _, watched in Players:GetPlayers() do
+	watchPlayer(watched)
+end
+table.insert(buildingConns, Players.PlayerAdded:Connect(watchPlayer))
+
 buildMap(startDef or MapPool.get(DEFAULT_MAP))
+
+building = false
+for _, conn in buildingConns do
+	conn:Disconnect()
+end
+for _, spawned in Players:GetPlayers() do
+	teleportToSpawn(spawned)
+end
 
 -- Der Map-Wechsel wird jetzt vom MatchManager am Rundenende (nach dem Voting)
 -- ausgeloest, nicht mehr frei per Menue. switchMap wird dafuer freigegeben.

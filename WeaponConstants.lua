@@ -35,4 +35,21 @@ Constants.SELF_KNOCKBACK_SPEED = (85000 * 1.2) / 100 / Constants.UU_PER_STUD * C
 Constants.SELF_KNOCKBACK_UP_SPEED = 90000 / 100 / Constants.UU_PER_STUD * Constants.SELF_KNOCKBACK_MULT
 Constants.MAX_EXTERNAL_IMPULSE = 140
 
+-- Gegner-Knockback -- der Tribes-Spass: Feinde wegpunten (Juggling, Luftkaempfe,
+-- Leute von Basen/Klippen schiessen). Nutzt denselben rohen T:A-Momentum wie
+-- self, aber eigene Multiplikatoren. Der Client skaliert eingehende Impulse
+-- zusaetzlich (ImpulseScale ~0.4) und cappt auf MAX_EXTERNAL_IMPULSE. Zum
+-- Justieren des Gefuehls NUR die beiden MULT-Werte drehen (hoeher = mehr Punt).
+Constants.ENEMY_KNOCKBACK_MULT = 1.15 -- Splash: skaliert zusaetzlich mit Naehe/Schaden
+Constants.ENEMY_KNOCKBACK_SPEED = (85000 * 1.2) / 100 / Constants.UU_PER_STUD * Constants.ENEMY_KNOCKBACK_MULT
+Constants.ENEMY_KNOCKBACK_UP_SPEED = 90000 / 100 / Constants.UU_PER_STUD * Constants.ENEMY_KNOCKBACK_MULT
+Constants.DIRECT_KNOCKBACK_MULT = 1.75 -- Direkt-Treffer punten voll entlang der Disc-Flugrichtung
+Constants.DIRECT_KNOCKBACK_SPEED = (85000 * 1.2) / 100 / Constants.UU_PER_STUD * Constants.DIRECT_KNOCKBACK_MULT
+Constants.DIRECT_KNOCKBACK_UP_SPEED = 90000 / 100 / Constants.UU_PER_STUD * Constants.DIRECT_KNOCKBACK_MULT * 0.55
+
+-- Saubere Mid-Air-Direkttreffer (Gegner schnell UND in der Luft) belohnen: der
+-- ikonische Tribes-Skillshot wird lethal. 1.35 * 98 (Soldier) = 132 -> One-Shot
+-- bei 100 HP. Bodennahe/langsame Direkttreffer bleiben unveraendert.
+Constants.MIDAIR_DIRECT_MULT = 1.35
+
 return Constants

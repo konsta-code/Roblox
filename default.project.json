@@ -110,7 +110,8 @@
         "Equipment": { "$path": "Equipment.client.lua" },
         "Chaingun": { "$path": "Chaingun.client.lua" },
         "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" },
-        "MapMenu": { "$path": "MapMenu.client.lua" }
+        "MapMenu": { "$path": "MapMenu.client.lua" },
+        "CameraShake": { "$path": "CameraShake.client.lua" }
       }
     },
     "Teams": {

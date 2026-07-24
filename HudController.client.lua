@@ -721,6 +721,14 @@ combatFeedEvent.OnClientEvent:Connect(function(killerName: string?, victimName: 
 	entry.Text = if killerName
 		then string.format("%s  [%s]  %s", killerName, weapon, victimName)
 		else string.format("%s ist gefallen", victimName)
+	if killerName == player.DisplayName then
+		-- Deine eigenen Kills stechen hervor.
+		entry.Size = UDim2.fromOffset(350, 28)
+		entry.TextSize = 14
+		entry.BackgroundColor3 = Color3.fromRGB(34, 66, 42)
+		entry.BackgroundTransparency = 0.08
+		entry.TextColor3 = Color3.fromRGB(180, 255, 197)
+	end
 	entry.Parent = combatFeed
 
 	local corner = Instance.new("UICorner")
@@ -795,31 +803,54 @@ medalSubtitle.TextSize = 10
 medalSubtitle.Visible = false
 medalSubtitle.Parent = medalFrame
 
+-- Award-Eskalation: hoeherer Tier = knackigerer Punch, hoehere/lautere Pitch und
+-- ab Tier 3 ein tieferer Wumms-Layer. Farbe steigert sich gold -> rot.
+local AWARD_TIERS = {
+	["DOUBLE KILL"] = { tier = 2, color = Color3.fromRGB(255, 205, 78) },
+	["KILLING SPREE"] = { tier = 3, color = Color3.fromRGB(255, 165, 60) },
+	["TRIPLE KILL"] = { tier = 3, color = Color3.fromRGB(255, 150, 55) },
+	["MULTI KILL"] = { tier = 4, color = Color3.fromRGB(255, 110, 50) },
+	["UNSTOPPABLE"] = { tier = 5, color = Color3.fromRGB(255, 66, 58) },
+	["BLUE PLATE SPECIAL"] = { tier = 4, color = Color3.fromRGB(92, 224, 255), blue = true },
+}
+
 local medalSequence = 0
 local function showCombatMedal(award: string)
 	medalSequence += 1
 	local sequence = medalSequence
-	local isBluePlate = award == "BLUE PLATE SPECIAL"
-	local color = if isBluePlate then Color3.fromRGB(92, 224, 255) else Color3.fromRGB(255, 205, 78)
+	local info = AWARD_TIERS[award] or { tier = 1, color = Color3.fromRGB(255, 205, 78) }
+	local tier = info.tier
+
 	medalTitle.Text = award
-	medalTitle.TextColor3 = color
-	medalStroke.Color = color
-	medalSubtitle.Text = if isBluePlate then "MID-AIR DIRECT HIT" else "COMBAT AWARD"
+	medalTitle.TextColor3 = info.color
+	medalStroke.Color = info.color
+	medalStroke.Thickness = 2 + (tier - 1) * 0.5
+	medalSubtitle.Text = if info.blue then "MID-AIR DIRECT HIT" else "COMBAT AWARD"
 	medalFrame.GroupTransparency = 0
-	medalScale.Scale = 0.72
-	TweenService:Create(medalScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Scale = 1,
+
+	medalScale.Scale = 0.66 - tier * 0.02
+	TweenService:Create(medalScale, TweenInfo.new(0.26 + tier * 0.015, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Scale = 1 + (tier - 1) * 0.035,
 	}):Play()
 
-	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-	sound.Volume = 0.5
-	sound.PlaybackSpeed = if isBluePlate then 1.55 else 1.35
-	sound.Parent = SoundService
-	sound:Play()
-	Debris:AddItem(sound, 2)
+	local ping = Instance.new("Sound")
+	ping.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+	ping.Volume = math.clamp(0.42 + tier * 0.07, 0.42, 0.85)
+	ping.PlaybackSpeed = if info.blue then 1.6 else 1.0 + tier * 0.13
+	ping.Parent = SoundService
+	ping:Play()
+	Debris:AddItem(ping, 2)
+	if tier >= 3 then
+		local boom = Instance.new("Sound")
+		boom.SoundId = "rbxasset://sounds/impact_explosion_03.mp3"
+		boom.Volume = math.clamp(0.1 + tier * 0.045, 0.1, 0.38)
+		boom.PlaybackSpeed = 1.05 + tier * 0.05
+		boom.Parent = SoundService
+		boom:Play()
+		Debris:AddItem(boom, 2)
+	end
 
-	task.delay(0.9, function()
+	task.delay(0.9 + tier * 0.09, function()
 		if sequence == medalSequence then
 			TweenService:Create(medalFrame, TweenInfo.new(0.45), { GroupTransparency = 1 }):Play()
 		end
