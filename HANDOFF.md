@@ -104,9 +104,19 @@ Soft-Currency + Robux). Zuerst Core stabil und fun machen, dann Lobby-Layer.
 
 ## Status
 
-Alles obige ist implementiert + `stylua`-parse-geprüft, aber **noch nicht
-vollständig in Studio playgetestet**. Bitte im Play-Modus verifizieren.
-Combat-Werte sind über die `MULT`-Konstanten leicht justierbar (playtest-getrieben).
+Alles obige ist implementiert + `stylua`-parse-geprüft. **Smoke-Test in Studio
+(2026-07-24, automatisiert) bestanden:** frischer Boot startet in der Lobby,
+LoadoutMenu öffnet automatisch mit BEREIT-Button (0/1), Klassenwahl greift
+sofort (Waffenleiste wechselte live Sentinel -> Pathfinder), Ready startet
+Warmup -> Match, Menü schließt beim Rundenstart. Punkt-blank-Disc: Selbst-Splash
+100 -> 71 HP + massiver Disc-Jump-Knockback. `SkiSlideHiss`/`SkiSlideRumble`
+existieren in SoundService, `MatchReady`/`MovementStateSync`/`ExplosionFeedback`
+in ReplicatedStorage. Kein einziger Script-Error im Output (inkl. Bot-Kämpfen).
+**Noch offen (braucht Ohren/Gefühl):** Sound-Lautstärken, Shake-Stärke,
+Ski-Sound-Charakter — über die MULT-/Target-Konstanten justieren.
+Bekannte kleine Altlasten: "Hello world!"-Print von einem Stray-Script (nur in
+der Place-Datei, nicht im Rojo-Tree) + orange Warnung
+`GuiService.SelectedObject to invalid GuiObject` beim Menü-Auto-Open (kosmetisch).
 
 ## Harte Regel (hat uns eingeholt)
 
