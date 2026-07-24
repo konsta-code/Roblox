@@ -10,7 +10,25 @@ local combatFeedEvent = ReplicatedStorage:WaitForChild("CombatFeed")
 local damageFeedbackEvent = ReplicatedStorage:WaitForChild("DamageFeedback")
 local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
 
+-- Dynamisch statt in default.project.json angelegt: ein neuer $path-/Instanz-
+-- Eintrag wuerde einen rojo-serve-Neustart erzwingen und Clients an einem
+-- haengenden WaitForChild scheitern lassen, wenn der Snapshot alt ist.
+local explosionFeedbackEvent = ReplicatedStorage:FindFirstChild("ExplosionFeedback") :: RemoteEvent?
+if not explosionFeedbackEvent then
+	local event = Instance.new("RemoteEvent")
+	event.Name = "ExplosionFeedback"
+	event.Parent = ReplicatedStorage
+	explosionFeedbackEvent = event
+end
+
 local CombatService = {}
+
+-- Explosions-Wumms: alle Clients kriegen Position + Radius und schuetteln die
+-- Kamera abstandsabhaengig (CameraShake.client) -- unabhaengig davon, ob sie
+-- Schaden genommen haben.
+function CombatService.BroadcastExplosion(position: Vector3, radius: number)
+	assert(explosionFeedbackEvent):FireAllClients(position, radius)
+end
 
 type HitInfo = {
 	attacker: Player?,

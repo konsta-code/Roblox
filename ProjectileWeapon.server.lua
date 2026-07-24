@@ -109,7 +109,7 @@ local function hasExplosionLineOfSight(
 	return workspace:Raycast(origin, direction * distance, rayParams) == nil
 end
 
-local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscProfile)
+local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscProfile, surfaceNormal: Vector3?)
 	local sphere = Instance.new("Part")
 	sphere.Name = "SpinfusorExplosion"
 	sphere.Shape = Enum.PartType.Ball
@@ -123,10 +123,31 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	sphere.Transparency = 0.2
 	sphere.Parent = workspace
 
+	-- Weiss-heisser Kern: ueberstrahlt im ersten Frame alles und kollabiert
+	-- sofort wieder -- das "Blitz"-Gefuehl, das der farbige Ball allein nicht hat.
+	local core = Instance.new("Part")
+	core.Name = "ExplosionCore"
+	core.Shape = Enum.PartType.Ball
+	core.Size = Vector3.one * 0.9
+	core.Position = position
+	core.Anchored = true
+	core.CanCollide = false
+	core.CanQuery = false
+	core.CanTouch = false
+	core.Material = Enum.Material.Neon
+	core.Color = profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.75)
+	core.Transparency = 0
+	core.Parent = workspace
+	TweenService:Create(core, TweenInfo.new(0.13, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.one * profile.splashRadius * 1.1,
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(core, 0.3)
+
 	local light = Instance.new("PointLight")
 	light.Color = profile.projectileColor
-	light.Brightness = 4
-	light.Range = math.max(18, profile.splashRadius * 1.3)
+	light.Brightness = 10
+	light.Range = math.max(24, profile.splashRadius * 1.8)
 	light.Shadows = true
 	light.Parent = sphere
 
@@ -162,6 +183,52 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	vapor.Parent = sphere
 	vapor:Emit(math.clamp(math.floor(profile.splashRadius * 0.75), 8, 24))
 
+	-- Gluehende Splitter: schnell, hell, fallen ballistisch -- verkauft die
+	-- physische Wucht, waehrend Flash/Vapor nur Energie/Staub sind.
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name = "DebrisSparks"
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(Color3.new(1, 1, 1), profile.projectileColor)
+	sparks.LightEmission = 1
+	sparks.Lifetime = NumberRange.new(0.35, 0.7)
+	sparks.Speed = NumberRange.new(38, 72)
+	sparks.Acceleration = Vector3.new(0, -70, 0)
+	sparks.Drag = 2.5
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Rate = 0
+	sparks.Size = NumberSequence.new(0.55, 0.1)
+	sparks.Parent = sphere
+	sparks:Emit(math.clamp(math.floor(profile.splashRadius * 1.2), 10, 30))
+
+	-- Schockwellen-Ring, flach auf die getroffene Oberflaeche gelegt (Normale
+	-- vom Impact-Raycast). Cylinder-Hoehenachse ist +X, daher dieselbe
+	-- lookAt*90-Grad-Konstruktion wie beim Disc-Projektil weiter unten.
+	local ringNormal = surfaceNormal or Vector3.yAxis
+	if ringNormal.Magnitude > 0.01 then
+		ringNormal = ringNormal.Unit
+		local ringUp = if math.abs(ringNormal.Y) > 0.98 then Vector3.zAxis else Vector3.yAxis
+		local ring = Instance.new("Part")
+		ring.Name = "Shockwave"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(0.35, 3, 3)
+		ring.CFrame = CFrame.lookAt(position + ringNormal * 0.15, position + ringNormal, ringUp)
+			* CFrame.Angles(0, math.rad(90), 0)
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.CanTouch = false
+		ring.Material = Enum.Material.Neon
+		ring.Color = profile.projectileColor:Lerp(Color3.new(1, 1, 1), 0.4)
+		ring.Transparency = 0.3
+		ring.Parent = workspace
+		local ringSpan = profile.splashRadius * 4.4
+		TweenService:Create(ring, TweenInfo.new(0.42, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.12, ringSpan, ringSpan),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(ring, 0.6)
+	end
+
 	-- Three staggered plasma shells give the disc an energy-wave silhouette at
 	-- long range, while remaining non-queryable and extremely short-lived.
 	for waveIndex = 1, 3 do
@@ -190,9 +257,12 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	end
 
 	local impactPitch = math.clamp(1.25 - profile.splashRadius / 70, 0.72, 1.05)
-	spatialSound(sphere, "ImpactBody", "rbxasset://sounds/impact_explosion_03.mp3", 0.44, impactPitch, 10, 260, 5, -8, 0.06)
+	spatialSound(sphere, "ImpactBody", "rbxasset://sounds/impact_explosion_03.mp3", 0.52, impactPitch, 10, 330, 5, -8, 0.06)
 	spatialSound(sphere, "ImpactDebris", "rbxasset://sounds/collide.wav", 0.25, 0.62 + impactPitch * 0.18, 8, 150, 3, -4, 0.12)
 	spatialSound(sphere, "PlasmaCrack", "rbxasset://sounds/electronicpingshort.wav", 0.20, 0.82 + impactPitch * 0.25, 12, 210, -8, 5, 0.04)
+	-- Sub-Layer: dieselbe Explosion stark runtergepitcht = Bass-Koerper, traegt
+	-- auch auf Distanz (groesseres MaxDistance) als dumpfes Grollen.
+	spatialSound(sphere, "ImpactSub", "rbxasset://sounds/impact_explosion_03.mp3", 0.55, 0.45, 14, 430, 10, -12, 0.05)
 
 	TweenService:Create(sphere, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Size = Vector3.one * profile.splashRadius * 2,
@@ -200,15 +270,18 @@ local function showExplosion(position: Vector3, profile: ClassKitConstants.DiscP
 	}):Play()
 	TweenService:Create(light, TweenInfo.new(0.18), { Brightness = 0, Range = 0 }):Play()
 	-- Keep the transparent anchor alive long enough for the layered spatial
-	-- sound tails and vapor particles to finish.
-	Debris:AddItem(sphere, 2.8)
+	-- sound tails (the pitched-down sub layer runs ~3s) and vapor particles.
+	Debris:AddItem(sphere, 3.5)
+
+	CombatService.BroadcastExplosion(position, profile.splashRadius)
 end
 
 local function applyExplosion(
 	position: Vector3,
 	shooter: Player,
 	directHumanoid: Humanoid?,
-	profile: ClassKitConstants.DiscProfile
+	profile: ClassKitConstants.DiscProfile,
+	surfaceNormal: Vector3?
 )
 	for _, targetPlayer in Players:GetPlayers() do
 		local targetCharacter = targetPlayer.Character
@@ -271,7 +344,7 @@ local function applyExplosion(
 		end
 	end
 
-	showExplosion(position, profile)
+	showExplosion(position, profile, surfaceNormal)
 end
 
 local function hitHumanoid(instance: Instance): Humanoid?
@@ -612,7 +685,7 @@ RunService.Heartbeat:Connect(function(dt)
 					directHumanoid = nil
 					hitBase = BaseService.DamageHit(projectile.shooter, result.Instance, projectile.profile.directDamage)
 				end
-				applyExplosion(result.Position, projectile.shooter, directHumanoid, projectile.profile)
+				applyExplosion(result.Position, projectile.shooter, directHumanoid, projectile.profile, result.Normal)
 				BaseService.DamageExplosion(
 					projectile.shooter,
 					result.Position,

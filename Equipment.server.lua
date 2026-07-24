@@ -220,6 +220,7 @@ local function explodeGrenade(grenade: Grenade)
 	end
 
 	showExplosion(position, profile)
+	CombatService.BroadcastExplosion(position, profile.radius)
 	BaseService.DamageExplosion(
 		grenade.shooter,
 		position,

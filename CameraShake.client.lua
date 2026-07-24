@@ -40,6 +40,36 @@ movementImpulse.OnClientEvent:Connect(function(impulse)
 	end
 end)
 
+-- Explosions-Wumms: JEDER nahe Einschlag schuettelt, nicht nur eigene Treffer.
+-- Abstand ab Kamera (funktioniert auch tot/Spectate), quadratischer Falloff.
+-- Tuning: EXPLOSION_TRAUMA = Staerke im Epizentrum, FALLOFF_MULT = ab
+-- radius*MULT ist nichts mehr zu spueren. Das Event legt CombatService zur
+-- Laufzeit an (nicht in default.project.json), daher WaitForChild mit Timeout
+-- statt ewig zu haengen, falls ein alter Server-Snapshot laeuft.
+local EXPLOSION_TRAUMA = 0.42
+local EXPLOSION_FALLOFF_MULT = 3.5
+
+task.spawn(function()
+	local explosionFeedback = ReplicatedStorage:WaitForChild("ExplosionFeedback", 30)
+	if not explosionFeedback or not explosionFeedback:IsA("RemoteEvent") then
+		return
+	end
+	explosionFeedback.OnClientEvent:Connect(function(position, radius)
+		if typeof(position) ~= "Vector3" or typeof(radius) ~= "number" or radius <= 0 then
+			return
+		end
+		local camera = Workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		local distance = (camera.CFrame.Position - position).Magnitude
+		local falloff = 1 - math.clamp(distance / (radius * EXPLOSION_FALLOFF_MULT), 0, 1)
+		if falloff > 0 then
+			addTrauma(EXPLOSION_TRAUMA * falloff * falloff)
+		end
+	end)
+end)
+
 RunService:BindToRenderStep("CameraShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
 	if trauma <= 0 then
 		return
