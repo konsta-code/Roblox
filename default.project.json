@@ -35,7 +35,8 @@
         "WeaponFeedback": { "$path": "WeaponFeedback.lua" },
         "WeaponState": { "$path": "WeaponState.lua" },
         "WeaponConstants": { "$path": "WeaponConstants.lua" },
-        "ChaingunConstants": { "$path": "ChaingunConstants.lua" }
+        "ChaingunConstants": { "$path": "ChaingunConstants.lua" },
+        "MapPoolConstants": { "$path": "MapPoolConstants.lua" }
       },
       "FireWeapon": { "$className": "RemoteEvent" },
       "FireChaingun": { "$className": "RemoteEvent" },
@@ -52,7 +53,8 @@
       "TeamPing": { "$className": "RemoteEvent" },
       "CTFScoreUpdate": { "$className": "RemoteEvent" },
       "FlagCarryStatus": { "$className": "RemoteEvent" },
-      "MatchStateChanged": { "$className": "RemoteEvent" }
+      "MatchStateChanged": { "$className": "RemoteEvent" },
+      "MapVote": { "$className": "RemoteEvent" }
     },
     "ServerScriptService": {
       "CTFManager": { "$path": "CTFManager.server.lua" },
@@ -69,7 +71,7 @@
       "MovementGuard": { "$path": "MovementGuard.server.lua" },
       "Ability": { "$path": "Ability.server.lua" },
       "WeaponState": { "$path": "WeaponState.server.lua" },
-      "WorldEnvironment": { "$path": "WorldEnvironment.server.lua" },
+      "WorldEnvironment": { "$path": "WorldEnvironment.lua" },
       "PlayerData": { "$path": "PlayerData.server.lua" },
       "CharacterPresentation": { "$path": "CharacterPresentation.server.lua" },
       "ImportedAssetOrganizer": { "$path": "ImportedAssetOrganizer.server.lua" },
@@ -78,8 +80,9 @@
       "NaturalTerrain": { "$path": "NaturalTerrain.server.lua" },
       "ImportedMapLoader": { "$path": "ImportedMapLoader.server.lua" },
       "MapArt": { "$path": "MapArt.server.lua" },
-      "TribesSunset": { "$path": "TribesSunset.server.lua" },
-      "TribesWorld": { "$path": "TribesWorld.server.lua" }
+      "WorldGen": { "$path": "WorldGen.lua" },
+      "Dressing": { "$path": "Dressing.lua" },
+      "MapDirector": { "$path": "MapDirector.server.lua" }
     },
     "StarterPlayer": {
       "$properties": {
@@ -106,7 +109,8 @@
         "Ability": { "$path": "Ability.client.lua" },
         "Equipment": { "$path": "Equipment.client.lua" },
         "Chaingun": { "$path": "Chaingun.client.lua" },
-        "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" }
+        "ProjectileWeapon": { "$path": "ProjectileWeapon.client.lua" },
+        "MapMenu": { "$path": "MapMenu.client.lua" }
       }
     },
     "Teams": {

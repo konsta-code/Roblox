@@ -76,9 +76,11 @@ end
 		return
 	end
 	local position = requestedPosition :: Vector3
-	if (position - root.Position).Magnitude > 1100
-		or math.abs(position.X) > 800
-		or math.abs(position.Z) > 550
+	-- Bounds an die groesseren Pool-Maps angepasst (X +-760, Z +-952); die
+	-- Magnitude erlaubt Pings ueber die ganze Karte (Diagonale ~2400).
+	if (position - root.Position).Magnitude > 2600
+		or math.abs(position.X) > 820
+		or math.abs(position.Z) > 1000
 		or position.Y < -155
 		or position.Y > 450 then
 		return
@@ -104,6 +106,23 @@ local phase: MatchPhase = "Warmup"
 local phaseTimeRemaining = Constants.WARMUP_DURATION
 local liveScores: { [Team]: number } = {}
 local lastBroadcastSecond = -1
+local mapVotes: { [Player]: string } = {}
+local transitioning = false
+
+-- Map-Voting: Stimmen werden NUR in der PostMatch-Phase gezaehlt. Jeder Spieler
+-- hat eine (aenderbare) Stimme; die Gewinner-Map baut MatchManager am Ende der
+-- PostMatch-Phase (siehe Heartbeat) ueber _G.RequestMapSwitch (MapDirector).
+local mapVoteEvent = ReplicatedStorage:WaitForChild("MapVote", 10)
+if mapVoteEvent and mapVoteEvent:IsA("RemoteEvent") then
+	mapVoteEvent.OnServerEvent:Connect(function(player: Player, mapId)
+		if phase == "PostMatch" and typeof(mapId) == "string" then
+			mapVotes[player] = mapId
+		end
+	end)
+end
+Players.PlayerRemoving:Connect(function(player)
+	mapVotes[player] = nil
+end)
 
 local function broadcastState(winnerName: string?)
 	local roundedTime = math.max(0, math.ceil(phaseTimeRemaining))
@@ -134,6 +153,10 @@ local function startMatch()
 	ReplicatedStorage:SetAttribute("MatchOvertime", false)
 	ReplicatedStorage:SetAttribute("MatchMVP", nil)
 	ReplicatedStorage:SetAttribute("MatchMVPScore", nil)
+	for placeIndex = 1, 3 do
+		ReplicatedStorage:SetAttribute("MatchTop" .. placeIndex .. "Name", nil)
+		ReplicatedStorage:SetAttribute("MatchTop" .. placeIndex .. "Score", nil)
+	end
 
 	CTFSignals.RequestScoreReset()
 	liveScores = {}
@@ -202,6 +225,24 @@ local function endMatch()
 	ReplicatedStorage:SetAttribute("MatchMVPScore", bestPlayer and bestScore or nil)
 	ReplicatedStorage:SetAttribute("MatchOvertime", false)
 
+	-- Top 3 nach RoundScore fuers Podium (ReplicatedStorage-Attribute wie MVP).
+	local ranking = {}
+	for _, participant in Players:GetPlayers() do
+		local roundScore = participant:GetAttribute("RoundScore")
+		table.insert(ranking, {
+			name = participant.DisplayName,
+			score = if typeof(roundScore) == "number" then roundScore else 0,
+		})
+	end
+	table.sort(ranking, function(a, b)
+		return a.score > b.score
+	end)
+	for placeIndex = 1, 3 do
+		local entry = ranking[placeIndex]
+		ReplicatedStorage:SetAttribute("MatchTop" .. placeIndex .. "Name", entry and entry.name or nil)
+		ReplicatedStorage:SetAttribute("MatchTop" .. placeIndex .. "Score", entry and entry.score or nil)
+	end
+
 	broadcastState(tie and "Unentschieden" or (winner and winner.Name or nil))
 end
 
@@ -236,7 +277,31 @@ RunService.Heartbeat:Connect(function(dt)
 	elseif phase == "Overtime" then
 		endMatch()
 	elseif phase == "PostMatch" then
-		startWarmup()
+		-- Voting auswerten, Gewinner-Map bauen (yields ~5-15s, Spieler werden vom
+		-- MapDirector sicher gehalten), dann die naechste Runde starten.
+		if not transitioning then
+			transitioning = true
+			task.spawn(function()
+				local tally: { [string]: number } = {}
+				local bestId, bestVotes = nil, 0
+				for _, votedId in mapVotes do
+					local n = (tally[votedId] or 0) + 1
+					tally[votedId] = n
+					if n > bestVotes then
+						bestId, bestVotes = votedId, n
+					end
+				end
+				mapVotes = {}
+
+				local currentId = workspace:GetAttribute("CurrentMapId")
+				if bestId and bestId ~= currentId and typeof(_G.RequestMapSwitch) == "function" then
+					_G.RequestMapSwitch(bestId)
+				end
+
+				transitioning = false
+				startWarmup()
+			end)
+		end
 	end
 end)
 

@@ -19,8 +19,9 @@
 -- (Auto-Balance Red/Blue). Ohne dieses Script wäre player.Team für neue
 -- Spieler nil, und SpawnLocations mit TeamColor würden nicht gefunden.
 --
--- Bekannte Lücke: beide Waffen (ProjectileWeapon, Chaingun) haben aktuell
--- keinen Friendly-Fire-Schutz, weil sie player.Team nirgends abfragen.
+-- Friendly Fire ist abgesichert: zentral in CombatService (Team-Check vor
+-- humanoid:TakeDamage) UND zusaetzlich in jeder Waffe (Team-Abfrage vor dem
+-- CombatService.Damage-Aufruf: ProjectileWeapon, Chaingun, Equipment, Ability).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")

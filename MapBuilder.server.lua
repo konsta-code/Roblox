@@ -643,46 +643,11 @@ for _, setup in baseSetups do
 end
 
 -- ============================================================
--- 6. DEZENTER HOEHENSCHNEE
--- Ein einzelner Emitter ist deutlich guenstiger als viele lokale Systeme.
+-- 6. WETTER
+-- Schneefall ist jetzt THEME-abhaengig und wird von Dressing.lua erzeugt (nur
+-- Schnee-Maps). MapBuilder baut hier bewusst kein Wetter mehr - so passt der
+-- theme-neutrale Basis-Build zu Gras, Schnee UND Wueste.
 -- ============================================================
-local snowVolume = slab(
-	"SnowVolume",
-	Vector3.new(1450, 1, 950),
-	CFrame.new(0, 140, 0),
-	Color3.new(1, 1, 1),
-	Enum.Material.SmoothPlastic,
-	map,
-	false
-)
-snowVolume.Transparency = 1
-snowVolume.CanQuery = false
-snowVolume.CastShadow = false
-
-local snow = Instance.new("ParticleEmitter")
-snow.Name = "AlpineSnow"
-snow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-snow.Rate = 90
-snow.Lifetime = NumberRange.new(7, 10)
-snow.Speed = NumberRange.new(1, 3)
-snow.Acceleration = Vector3.new(2, -4.5, 0)
-snow.Drag = 0.35
-snow.EmissionDirection = Enum.NormalId.Bottom
-snow.SpreadAngle = Vector2.new(180, 180)
-snow.Rotation = NumberRange.new(0, 360)
-snow.RotSpeed = NumberRange.new(-35, 35)
-snow.LightEmission = 0.42
-snow.Size = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 0.09),
-	NumberSequenceKeypoint.new(0.5, 0.16),
-	NumberSequenceKeypoint.new(1, 0.04),
-})
-snow.Transparency = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 0.35),
-	NumberSequenceKeypoint.new(0.8, 0.5),
-	NumberSequenceKeypoint.new(1, 1),
-})
-snow.Parent = snowVolume
 
 print(
 	"[MapBuilder] TribesMapLive TITAN gebaut - 1.500x1.000, Core, Flanken, Hochland und Hinterland, "
@@ -695,8 +660,9 @@ print(
 -- mit Jetpack/Ski zurueckzukehren. Der Zustand repliziert als Player-Attribut
 -- und wird vom HUD als deutlicher Countdown dargestellt.
 -- ============================================================
-local ARENA_MAX_X = 770
-local ARENA_MAX_Z = 520
+-- Sized for the large TribesWorld open map (X ±760, Z ±952, bases at Z ±780/800).
+local ARENA_MAX_X = 820
+local ARENA_MAX_Z = 1010
 local ARENA_MIN_Y = -145
 local ARENA_RETURN_TIME = 6
 local BOUNDARY_UPDATE_INTERVAL = 0.2
