@@ -92,10 +92,40 @@ local function movementFlags(track, onGround: boolean, speed: number): (boolean,
 		skiing = skiing or owner:GetAttribute("IsSkiing") == true
 		jetpacking = jetpacking or owner:GetAttribute("IsJetpacking") == true
 	end
-	-- Remote client attributes may arrive late; fast grounded motion still gets
-	-- the characteristic low ski stance.
-	if not skiing and onGround and speed > 44 then skiing = true end
+	-- Fallback fuer fehlende Attribute (Join-Race, alte Server): schneller als
+	-- maximales Gehen (WALK_SPEED 22 * Scale-Cap 1.5 = 33) am Boden = Skiing.
+	if not skiing and onGround and speed > 36 then skiing = true end
 	return skiing, jetpacking
+end
+
+-- Raeumlicher Ski-Rutsch-Loop fuer FREMDE Charaktere und Bots (der eigene
+-- Charakter hat den fetten Stereo-Loop in MovementPresentation). Am RootPart
+-- verankert = 3D-Abstandsfalloff; ein voruebergehender Capper wird hoerbar.
+local function updateSkiSound(track, skiing: boolean, speed: number, dt: number)
+	local sound = track.skiSound
+	if not sound or not sound.Parent then
+		sound = Instance.new("Sound")
+		sound.Name = "SkiSlideLoop"
+		sound.SoundId = "rbxasset://sounds/action_falling.ogg"
+		sound.Looped = true
+		sound.Volume = 0
+		sound.PlaybackSpeed = 1.5
+		sound.RollOffMode = Enum.RollOffMode.InverseTapered
+		sound.RollOffMinDistance = 9
+		sound.RollOffMaxDistance = 130
+		local equalizer = Instance.new("EqualizerSoundEffect")
+		equalizer.LowGain = -4
+		equalizer.MidGain = 0
+		equalizer.HighGain = 5
+		equalizer.Parent = sound
+		sound.Parent = track.root
+		sound:Play()
+		track.skiSound = sound
+	end
+	local alpha = math.clamp((speed - 8) / 95, 0, 1)
+	local target = if skiing then 0.1 + alpha * 0.55 else 0
+	sound.Volume += (target - sound.Volume) * math.clamp(dt * 10, 0, 1)
+	sound.PlaybackSpeed = 1.4 + alpha * 0.8
 end
 
 local function apply(track, key: string, target: CFrame, alpha: number)
@@ -119,6 +149,9 @@ local function animate(track, dt: number)
 	local localVelocity = root.CFrame:VectorToObjectSpace(velocity)
 	local onGround = grounded(track)
 	local skiing, jetpacking = movementFlags(track, onGround, speed)
+	if model ~= Players.LocalPlayer.Character then
+		updateSkiSound(track, skiing and onGround, speed, dt)
+	end
 	local weight = armorWeight(model)
 	local heavy = weight == "HEAVY"
 	local light = weight == "LIGHT"

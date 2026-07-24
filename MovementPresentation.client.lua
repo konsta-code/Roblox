@@ -2,10 +2,27 @@
 
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
 local player = Players.LocalPlayer
+
+-- Ski-/Jet-Status an den Server melden (MovementGuard spiegelt ihn als
+-- Character-Attribut fuer alle): der SkiController setzt die Attribute nur
+-- CLIENT-seitig, die repliziert Roblox nicht -- Fremd-Clients sahen deshalb
+-- laufende Beine statt Ski-Haltung. Event wird serverseitig dynamisch erzeugt,
+-- daher WaitForChild mit Timeout statt haengen.
+local movementStateSync: RemoteEvent? = nil
+task.spawn(function()
+	local event = ReplicatedStorage:WaitForChild("MovementStateSync", 30)
+	if event and event:IsA("RemoteEvent") then
+		movementStateSync = event
+	end
+end)
+local lastSentSkiing = false
+local lastSentJetpacking = false
+local lastSyncTime = 0
 
 -- High-speed presentation is deliberately screen-space only. It makes routes
 -- above skiing speed readable without adding camera shake to precision aim.
@@ -146,6 +163,42 @@ local function playLanding(volume: number)
 	Debris:AddItem(sound, 2)
 end
 
+-- Ski-Rutsch-Loop: zwei Schichten aus derselben Rausch-Quelle wie der Wind.
+-- Hiss (hochgepitcht, Hoehen betont) = Kanten-Zischen auf der Flaeche,
+-- Rumble (stark runtergepitcht, Baesse betont) = Vibration/Grollen unterm
+-- Brett. Beide skalieren mit Bodengeschwindigkeit und sind in der Luft stumm.
+local function newSkiLayer(name: string, pitch: number, lowGain: number, highGain: number): Sound
+	local sound = Instance.new("Sound")
+	sound.Name = name
+	sound.SoundId = "rbxasset://sounds/action_falling.ogg"
+	sound.Looped = true
+	sound.Volume = 0
+	sound.PlaybackSpeed = pitch
+	local equalizer = Instance.new("EqualizerSoundEffect")
+	equalizer.LowGain = lowGain
+	equalizer.MidGain = 0
+	equalizer.HighGain = highGain
+	equalizer.Parent = sound
+	sound.Parent = SoundService
+	sound:Play()
+	return sound
+end
+
+local skiHiss = newSkiLayer("SkiSlideHiss", 1.7, -10, 6)
+local skiRumble = newSkiLayer("SkiSlideRumble", 0.32, 8, -10)
+
+-- Standard-Roblox-Schrittgeraeusch ("Running" im RootPart) beim Skiing
+-- stummschalten -- sonst klingt Skifahren wie normales Laufen. Beim Verlassen
+-- des Ski-Zustands einmalig auf den Roblox-Default (0.65) zurueck.
+local DEFAULT_FOOTSTEP_VOLUME = 0.65
+local wasSkiing = false
+
+local function defaultRunningSound(character: Model): Sound?
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local sound = root and root:FindFirstChild("Running")
+	return if sound and sound:IsA("Sound") then sound else nil
+end
+
 player.CharacterAdded:Connect(install)
 if player.Character then
 	task.spawn(install, player.Character)
@@ -171,6 +224,37 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, emitter in skiEmitters do
 		emitter.Enabled = skiing and horizontalSpeed > 18
 		emitter.Rate = math.clamp((horizontalSpeed - 12) * 0.48, 0, 62)
+	end
+
+	-- Ski-Audio: Lautstaerke/Pitch aus der Bodengeschwindigkeit. IsSkiing ist
+	-- nur bei Bodenkontakt gesetzt (SkiController), ueber Kuppen wird der Loop
+	-- also automatisch kurz still -- der Tribes-Rhythmus aus Zischen und Stille.
+	local skiAlpha = math.clamp((horizontalSpeed - 8) / 95, 0, 1)
+	local hissTarget = if skiing then 0.08 + skiAlpha * 0.5 else 0
+	local rumbleTarget = if skiing then 0.06 + skiAlpha * 0.36 else 0
+	local fade = math.clamp(dt * 10, 0, 1)
+	skiHiss.Volume += (hissTarget - skiHiss.Volume) * fade
+	skiRumble.Volume += (rumbleTarget - skiRumble.Volume) * fade
+	skiHiss.PlaybackSpeed = 1.5 + skiAlpha * 0.75
+	skiRumble.PlaybackSpeed = 0.3 + skiAlpha * 0.14
+
+	local runningSound = defaultRunningSound(character)
+	if skiing then
+		if runningSound then runningSound.Volume = 0 end
+	elseif wasSkiing and runningSound then
+		runningSound.Volume = DEFAULT_FOOTSTEP_VOLUME
+	end
+	wasSkiing = skiing
+
+	-- Status-Sync an den Server: nur bei Aenderung, max ~10/s.
+	local now = os.clock()
+	if movementStateSync
+		and (skiing ~= lastSentSkiing or jetpacking ~= lastSentJetpacking)
+		and now - lastSyncTime > 0.1 then
+		movementStateSync:FireServer(skiing, jetpacking)
+		lastSentSkiing = skiing
+		lastSentJetpacking = jetpacking
+		lastSyncTime = now
 	end
 
 	local speedAlpha = math.clamp((horizontalSpeed - 72) / 115, 0, 1)

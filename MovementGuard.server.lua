@@ -23,6 +23,34 @@ local accumulator = 0
 local CHECK_INTERVAL = 0.1
 local WARNING_COOLDOWN = 2
 
+-- Praesentations-Sync: der Client meldet Ski-/Jet-Status (MovementPresentation),
+-- der Server spiegelt ihn als CHARACTER-Attribut -- das repliziert an alle
+-- Clients, damit Fremd-Charaktere echte Ski-Posen + Ski-Sounds kriegen
+-- (CharacterMotion liest genau diese Model-Attribute). Rein kosmetisch, hat
+-- keinerlei Einfluss auf Physik oder Schaden -- deshalb reicht Typ-Check +
+-- Rate-Limit statt Plausibilitaetspruefung. Dynamisch erzeugt statt in
+-- default.project.json (kein rojo-serve-Neustart noetig).
+local stateSyncEvent = ReplicatedStorage:FindFirstChild("MovementStateSync") :: RemoteEvent?
+if not stateSyncEvent then
+	local event = Instance.new("RemoteEvent")
+	event.Name = "MovementStateSync"
+	event.Parent = ReplicatedStorage
+	stateSyncEvent = event
+end
+local lastStateSync: { [Player]: number } = {}
+
+assert(stateSyncEvent).OnServerEvent:Connect(function(player, skiing, jetpacking)
+	if typeof(skiing) ~= "boolean" or typeof(jetpacking) ~= "boolean" then return end
+	local now = os.clock()
+	if now - (lastStateSync[player] or 0) < 0.08 then return end
+	lastStateSync[player] = now
+	local character = player.Character
+	if character then
+		character:SetAttribute("IsSkiing", skiing)
+		character:SetAttribute("IsJetpacking", jetpacking)
+	end
+end)
+
 local function isFinite(vector: Vector3): boolean
 	return vector.X == vector.X
 		and vector.Y == vector.Y
@@ -75,6 +103,7 @@ end
 Players.PlayerAdded:Connect(registerPlayer)
 Players.PlayerRemoving:Connect(function(player)
 	snapshots[player] = nil
+	lastStateSync[player] = nil
 end)
 
 MatchSignals.RoundStarted:Connect(function()
