@@ -975,6 +975,7 @@ local function formatTime(seconds: number): string
 end
 
 local PHASE_LABELS = {
+	Lobby = "Lobby // Klasse waehlen + Ready [L]",
 	Warmup = "Aufwaermphase",
 	InProgress = "Laufende Runde",
 	Overtime = "OVERTIME // NAECHSTER CAP GEWINNT",

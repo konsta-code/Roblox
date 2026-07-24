@@ -110,14 +110,78 @@ closeButton.Modal = true
 closeButton.Parent = panel
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -56, 0, 34)
+statusLabel.Size = UDim2.new(1, -286, 0, 34)
 statusLabel.Position = UDim2.new(0, 28, 1, -48)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 14
 statusLabel.TextColor3 = Color3.fromRGB(170, 185, 205)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Text = "Im Feld: nächster Spawn. An eigener Inventarstation: sofort."
 statusLabel.Parent = panel
+
+-- Ready-Button: nur in der Lobby-Phase sichtbar. Der Server spiegelt die
+-- Bereitschaft als Spieler-Attribut "MatchReady"; sind genug Spieler bereit
+-- (LOBBY_READY_FRACTION), startet MatchManager sofort den Warmup.
+local readyButton = Instance.new("TextButton")
+readyButton.Size = UDim2.fromOffset(210, 40)
+readyButton.AnchorPoint = Vector2.new(1, 1)
+readyButton.Position = UDim2.new(1, -28, 1, -44)
+readyButton.BackgroundColor3 = Color3.fromRGB(34, 120, 62)
+readyButton.BorderSizePixel = 0
+readyButton.Font = Enum.Font.GothamBlack
+readyButton.TextSize = 16
+readyButton.TextColor3 = Color3.fromRGB(235, 245, 240)
+readyButton.Text = "BEREIT MELDEN"
+readyButton.Visible = false
+readyButton.Parent = panel
+
+local readyCorner = Instance.new("UICorner")
+readyCorner.CornerRadius = UDim.new(0, 8)
+readyCorner.Parent = readyButton
+
+local matchReadyEvent: RemoteEvent? = nil
+task.spawn(function()
+	local event = ReplicatedStorage:WaitForChild("MatchReady", 30)
+	if event and event:IsA("RemoteEvent") then
+		matchReadyEvent = event
+	end
+end)
+
+local function refreshReadyButton()
+	local inLobby = ReplicatedStorage:GetAttribute("MatchPhase") == "Lobby"
+	readyButton.Visible = inLobby
+	if not inLobby then
+		return
+	end
+	local readyCount = 0
+	local total = 0
+	for _, other in Players:GetPlayers() do
+		total += 1
+		if other:GetAttribute("MatchReady") == true then
+			readyCount += 1
+		end
+	end
+	local isReady = player:GetAttribute("MatchReady") == true
+	readyButton.Text = string.format(if isReady then "BEREIT ✓  (%d/%d)" else "BEREIT MELDEN  (%d/%d)", readyCount, total)
+	readyButton.BackgroundColor3 = if isReady then Color3.fromRGB(28, 82, 48) else Color3.fromRGB(34, 120, 62)
+end
+
+readyButton.Activated:Connect(function()
+	if matchReadyEvent then
+		matchReadyEvent:FireServer(player:GetAttribute("MatchReady") ~= true)
+	end
+end)
+
+-- Ready-Zaehler lebendig halten, solange die Lobby laeuft (Attribute mehrerer
+-- Spieler beobachten waere Connection-Verwaltung -- Polling alle 0.5 s reicht
+-- fuer einen Zaehler voellig).
+task.spawn(function()
+	while true do
+		refreshReadyButton()
+		task.wait(0.5)
+	end
+end)
 
 local cards: { [string]: TextButton } = {}
 local cardStrokes: { [string]: UIStroke } = {}
@@ -245,8 +309,25 @@ inventoryEvent.OnClientEvent:Connect(function(success: boolean, message: string)
 	end
 end)
 
+-- Lobby-Flow: Menue oeffnet automatisch beim Join in Lobby/Warmup und bei jedem
+-- Wechsel in die Lobby-Phase (PostMatch -> Lobby = "Rematch"-Moment). Beim
+-- Rundenstart schliesst es sich, damit niemand mit offenem Menue im Match steht.
 task.delay(0.8, function()
-	if ReplicatedStorage:GetAttribute("MatchPhase") == "Warmup" then
+	local currentPhase = ReplicatedStorage:GetAttribute("MatchPhase")
+	if currentPhase == "Lobby" or currentPhase == "Warmup" then
 		setOpen(true)
 	end
+end)
+
+ReplicatedStorage:GetAttributeChangedSignal("MatchPhase"):Connect(function()
+	local currentPhase = ReplicatedStorage:GetAttribute("MatchPhase")
+	if currentPhase == "Lobby" then
+		-- task.defer: MapMenu haengt am selben Signal und setzt beim Schliessen
+		-- LoadoutMenuOpen/Maus zurueck -- wir muessen NACH dessen Handler laufen,
+		-- sonst haengt ein sichtbares Menue mit gelockter Maus.
+		task.defer(setOpen, true)
+	elseif currentPhase == "InProgress" and overlay.Visible then
+		setOpen(false)
+	end
+	refreshReadyButton()
 end)

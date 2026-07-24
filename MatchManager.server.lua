@@ -1,7 +1,9 @@
 -- MatchManager.server.lua
 -- Ablageort: ServerScriptService
 --
--- Orchestriert den Runden-Loop: Warmup -> InProgress -> PostMatch -> Warmup.
+-- Orchestriert den Runden-Loop:
+-- Lobby (Klassenwahl + Ready) -> Warmup -> InProgress -> PostMatch -> Lobby.
+-- Die Lobby endet frueher, sobald LOBBY_READY_FRACTION der Spieler bereit ist.
 -- Win-Condition: zuerst X Captures ODER Zeitlimit erreicht (wer vorne liegt
 -- gewinnt, bei Gleichstand: Unentschieden).
 --
@@ -100,10 +102,10 @@ Players.PlayerRemoving:Connect(function(player)
 	lastTeamPing[player] = nil
 end)
 
-type MatchPhase = "Warmup" | "InProgress" | "Overtime" | "PostMatch"
+type MatchPhase = "Lobby" | "Warmup" | "InProgress" | "Overtime" | "PostMatch"
 
-local phase: MatchPhase = "Warmup"
-local phaseTimeRemaining = Constants.WARMUP_DURATION
+local phase: MatchPhase = "Lobby"
+local phaseTimeRemaining = Constants.LOBBY_DURATION
 local liveScores: { [Team]: number } = {}
 local lastBroadcastSecond = -1
 local mapVotes: { [Player]: string } = {}
@@ -137,9 +139,59 @@ local function enoughPlayers(): boolean
 	return #Players:GetPlayers() >= Constants.MIN_PLAYERS_TO_START
 end
 
+-- Lobby-Ready-Flow: Client meldet Bereitschaft (LoadoutMenu-Button), der Server
+-- spiegelt sie als Spieler-Attribut "MatchReady" (repliziert -> Clients koennen
+-- den Ready-Zaehler selbst aus den Attributen bauen). Nur in der Lobby-Phase.
+-- Dynamisch erzeugt wie TeamPing, damit kein rojo-serve-Neustart noetig ist.
+local matchReadyEvent = ReplicatedStorage:FindFirstChild("MatchReady")
+if not matchReadyEvent or not matchReadyEvent:IsA("RemoteEvent") then
+	if matchReadyEvent then
+		matchReadyEvent:Destroy()
+	end
+	matchReadyEvent = Instance.new("RemoteEvent")
+	matchReadyEvent.Name = "MatchReady"
+	matchReadyEvent.Parent = ReplicatedStorage
+end
+
+(matchReadyEvent :: RemoteEvent).OnServerEvent:Connect(function(player: Player, ready)
+	if phase == "Lobby" and typeof(ready) == "boolean" then
+		player:SetAttribute("MatchReady", ready)
+	end
+end)
+
+local function clearReadyFlags()
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("MatchReady", nil)
+	end
+end
+
+local function lobbyReadyToStart(): boolean
+	local players = Players:GetPlayers()
+	if #players < Constants.MIN_PLAYERS_TO_START then
+		return false
+	end
+	local readyCount = 0
+	for _, player in players do
+		if player:GetAttribute("MatchReady") == true then
+			readyCount += 1
+		end
+	end
+	return readyCount >= math.max(1, math.ceil(#players * Constants.LOBBY_READY_FRACTION))
+end
+
+local function startLobby()
+	phase = "Lobby"
+	phaseTimeRemaining = Constants.LOBBY_DURATION
+	ReplicatedStorage:SetAttribute("MatchOvertime", false)
+	clearReadyFlags()
+	MatchSignals.SetPhase(phase)
+	broadcastState()
+end
+
 local function startWarmup()
 	phase = "Warmup"
 	phaseTimeRemaining = Constants.WARMUP_DURATION
+	clearReadyFlags()
 	ReplicatedStorage:SetAttribute("MatchOvertime", false)
 	ReplicatedStorage:SetAttribute("MatchMVP", nil)
 	ReplicatedStorage:SetAttribute("MatchMVPScore", nil)
@@ -260,13 +312,24 @@ RunService.Heartbeat:Connect(function(dt)
 		local winnerAttribute = ReplicatedStorage:GetAttribute("MatchWinner")
 		broadcastState(if typeof(winnerAttribute) == "string" then winnerAttribute else nil)
 	end
+	-- Lobby endet frueher, sobald genug Spieler bereit sind -- nicht erst am Timer.
+	if phase == "Lobby" and lobbyReadyToStart() then
+		startWarmup()
+		return
+	end
 	if phaseTimeRemaining > 0 then return end
 
-	if phase == "Warmup" then
+	if phase == "Lobby" then
+		if enoughPlayers() then
+			startWarmup()
+		else
+			phaseTimeRemaining = Constants.LOBBY_DURATION
+		end
+	elseif phase == "Warmup" then
 		if enoughPlayers() then
 			startMatch()
 		else
-			phaseTimeRemaining = Constants.WARMUP_DURATION
+			startLobby()
 		end
 	elseif phase == "InProgress" then
 		if scoresAreTied() then
@@ -299,10 +362,10 @@ RunService.Heartbeat:Connect(function(dt)
 				end
 
 				transitioning = false
-				startWarmup()
+				startLobby()
 			end)
 		end
 	end
 end)
 
-startWarmup()
+startLobby()

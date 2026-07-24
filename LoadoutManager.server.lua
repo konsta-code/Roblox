@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Constants = require(ReplicatedStorage.Modules.LoadoutConstants)
+local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
 
 local selectEvent = ReplicatedStorage:WaitForChild("SelectLoadout")
 local lastChange: { [Player]: number } = {}
@@ -101,7 +102,13 @@ selectEvent.OnServerEvent:Connect(function(player: Player, requestedLoadout: any
 	local accessUntil = player:GetAttribute("InventoryAccessUntil")
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if typeof(accessUntil) == "number" and accessUntil >= now
+	local stationAccess = typeof(accessUntil) == "number" and accessUntil >= now
+	-- Lobby/Warmup sind kampffreie Phasen (Damage nur InProgress/Overtime):
+	-- ein Live-Wechsel ist dort genauso sicher wie an der Inventarstation --
+	-- und Pflicht fuer den Lobby-Flow (Klasse waehlen -> sofort spuerbar).
+	local matchPhase = MatchSignals.GetPhase()
+	local outOfCombat = matchPhase == "Lobby" or matchPhase == "Warmup"
+	if (stationAccess or outOfCombat)
 		and character and humanoid and humanoid.Health > 0 then
 		-- The station granted this short access window after validating team,
 		-- proximity and generator power, so a live class swap is safe here.
