@@ -9,10 +9,15 @@ Granaten, 9 Klassen, Bots, Flaggen/Generatoren/Basen). Repo:
 `github.com/konsta-code/Roblox` (Branch `main`, ein **Rojo**-Projekt:
 `default.project.json` mappt Dateien auf Roblox-Instanzen). Sprache: **Luau**.
 
+## Zielbild (langfristig)
+
+Publish auf Roblox + Monetarisierung (Lobby, Mode-Auswahl, Händler, Kisten,
+Soft-Currency + Robux). Zuerst Core stabil und fun machen, dann Lobby-Layer.
+
 ## Setup / wichtig
 
 - Es gibt **ZWEI Klone**. Das LIVE-Spiel läuft aus
-  `C:\Users\konst\Downloads\Roblox-Recovered` (dort läuft
+  `C:\\Users\\konst\\Downloads\\Roblox-Recovered` (dort läuft
   `rojo serve default.project.json --port 34872`, Studio synct von dort, die
   Place-Datei `CTFGame.rbxlx` liegt dort). Der GitHub-Repo-Inhalt entspricht dem
   Live-Stand (Runtime-Code identisch; einzelne Art-Binaries unter `art_source/`
@@ -60,7 +65,7 @@ Granaten, 9 Klassen, Bots, Flaggen/Generatoren/Basen). Repo:
   (Theme-Licht/Deko). `TribesWorld`/`TribesSunset`/`WorldEnvironment.server` sind
   **stillgelegt** (Stubs, unregistriert).
 - **MAP-VOTING am Rundenende**: `MatchManager` broadcastet Top-3, zählt `MapVote`
-  in der PostMatch-Phase (25 s), baut die Gewinner-Map beim Runden-Übergang.
+  in der PostMatch-Phase, baut die Gewinner-Map beim Runden-Übergang.
   `MapMenu.client` = PostMatch-Podium + Voting-Screen.
 - **HARDCORE COMBAT-FEEL**: Gegner-Knockback vom Spinfusor (Direkt punt't entlang
   Flugrichtung, Splash punt't weg; Tuning `ENEMY_`/`DIRECT_KNOCKBACK_MULT` in
@@ -70,6 +75,9 @@ Granaten, 9 Klassen, Bots, Flaggen/Generatoren/Basen). Repo:
 - **ANFANGS-SPAWN-FIX**: `MapDirector` hebt frisch gespawnte Charaktere während
   des Bauens nach oben (sonst spawnt man an der alten Basisposition und wird vom
   Terrain begraben) und teleportiert danach auf den gesetzten Spawn.
+- **TEMPO (Phase 1, 2026-07-24)**:
+  - `MatchConstants`: Warmup 6 s (vorher 10), Overtime 90 s (vorher 120), PostMatch 18 s (vorher 25)
+  - `Players.RespawnTime = 3.5` (gesetzt in `SpawnManager.server.lua`)
 
 ## Status
 
@@ -85,12 +93,14 @@ hat schon Modell-Laden + Jetpack zerschossen. Spawn-Probleme **nur über Positio
 lösen (Teleport/Anheben), nie über das Laden. Immer **inkrementell + einzeln
 getestet** arbeiten, kein Big-Bang.
 
-## Nächste offene Schritte (Track „hardcore fun shooter")
+## Nächste offene Schritte
 
-1. **Tempo**: kürzere Respawn-Zeit + kürzeres Warmup.
+**Sofort (Core-Polish):**
+1. Combat-Feel + Spawn-Fix + Map-Voting + neues Tempo im Play-Modus testen und `MULT`s / Shake justieren.
 2. **Explosions-Wumms**: größerer Blitz/Shockwave + fetterer Sound bei Disc-Impact.
-3. **Balance / Bot-KI**-Feinschliff (playtest-getrieben).
-4. Optional **Progression**: XP/Rang auf dem persistenten Career-Score (`PlayerData`).
+3. Balance / Bot-KI-Feinschliff (playtest-getrieben).
 
-Zuerst aber: Combat-Feel + Spawn-Fix + Map-Voting gegentesten und die `MULT`s /
-Shake nach Gefühl justieren.
+**Danach (Monetarisierung-Track):**
+4. Lobby-Grundgerüst (separate Place empfohlen) – Spieler treffen, Mode wählen, Queue.
+5. Economy: Soft-Currency + Händler + Kisten (Robux + Soft).
+6. Progression (XP/Rang auf Career-Score).
