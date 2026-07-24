@@ -28,6 +28,9 @@ local Players = game:GetService("Players")
 local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Hardcore-Tempo: kürzere Respawn-Zeit (Standard ist 5s)
+Players.RespawnTime = 3.5
+
 local Constants = require(ReplicatedStorage.Modules.SpawnConstants)
 local MatchSignals = require(ReplicatedStorage.Modules.MatchSignals)
 
